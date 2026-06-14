@@ -2500,14 +2500,20 @@ window.openBedActionModal = (pid) => {
                 const container = document.createElement('div');
                 container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
                 const titles = { class: 'จำแนกประเภทผู้ป่วย', fall: 'ความเสี่ยงหกล้ม', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+                const sources = {
+                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+                    fall: 'อ้างอิง: Hendrich II Fall Risk Model',
+                    class: ''
+                };
                 
-                // แก้ไขการจัดรูปแบบระยะห่างหัวกระดาษตรงนี้
                 let html = `
-                <div style="text-align:center; margin-bottom: 25px; padding-top: 10px;">
+                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
                     <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">สรุปประวัติ ${titles[type]}</h2>
                 </div>
+                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
                 <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
                 </div>
                 <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
                     <tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:10px;">วันที่ / เวลา</th><th style="border:1px solid #cbd5e1; padding:10px;">คะแนน</th><th style="border:1px solid #cbd5e1; padding:10px; text-align:left;">ผลลัพธ์</th><th style="border:1px solid #cbd5e1; padding:10px;">ผู้ประเมิน</th></tr>`;
@@ -2545,14 +2551,20 @@ window.openBedActionModal = (pid) => {
                 const container = document.createElement('div');
                 container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
                 const titles = { class: 'จำแนกประเภทผู้ป่วย', fall: 'ความเสี่ยงหกล้ม', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+                const sources = {
+                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+                    fall: 'อ้างอิง: Hendrich II Fall Risk Model',
+                    class: ''
+                };
                 
-                // แก้ไขการจัดรูปแบบระยะห่างหัวกระดาษตรงนี้
                 let html = `
-                <div style="text-align:center; margin-bottom: 25px; padding-top: 10px;">
+                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
                     <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">ประวัติละเอียด ${titles[type]}</h2>
                 </div>
+                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
                 <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
                 </div>`;
                 
                 let dict = {}; let labels = {};
@@ -2613,7 +2625,7 @@ window.openBedActionModal = (pid) => {
                 showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
             } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
         };
-
+        
         const printCpgGeneric = async (id, filename) => {
             if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF', 'error');
             const el = document.getElementById(id);

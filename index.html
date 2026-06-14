@@ -199,8 +199,8 @@
         <nav class="flex-1 overflow-y-auto py-4">
             <ul class="space-y-1">
                 <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2 drop-shadow-sm">เมนูหลัก (แดชบอร์ด)</li>
-                <li><a href="#" onclick="window.showDashboard('all')" id="nav-all" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📊</span> ภาพรวมทั้งหมด</a></li>
                 <li><a href="#" onclick="window.showDashboard('bed-overview')" id="nav-bed-overview" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🛏️</span> แผนผังเตียงผู้ป่วย</a></li>
+                <li><a href="#" onclick="window.showDashboard('all')" id="nav-all" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📊</span> ภาพรวมทั้งหมด</a></li>
                 <li><a href="#" onclick="window.showDashboard('class')" id="nav-class" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🗂️</span> จำแนกประเภทผู้ป่วย</a></li>
                 <li><a href="#" onclick="window.showDashboard('fall')" id="nav-fall" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">⚠️</span> ประเมินหกล้ม (Hendrich II)</a></li>
                 <li><a href="#" onclick="window.showDashboard('aws')" id="nav-aws" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🍷</span> ถอนพิษสุรา (AWS)</a></li>
@@ -208,7 +208,6 @@
                 
                 <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">คู่มือและผู้ช่วย</li>
                 <!-- NEW: AI Assistant Link -->
-                <li><a href="https://gemini.google.com/share/45538dbe7eb7" target="_blank" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-indigo-900/30 text-indigo-300 hover:text-indigo-200 transition-colors border-l-4 border-transparent gap-3 group"><span class="text-xl icon-3d group-hover:animate-pulse">✨</span> ผู้ช่วย AI (Gemini)<svg class="w-3 h-3 ml-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a></li>
                 <li><a href="#" onclick="window.showDashboard('cpg')" id="nav-cpg" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📖</span> CPG of AWS</a></li>
                 <li><a href="#" onclick="window.showDashboard('cpg-pi')" id="nav-cpg-pi" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🩹</span> CPG of Pressure Injury</a></li>
                 <li><a href="#" onclick="window.showDashboard('cpg-fall')" id="nav-cpg-fall" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🚶</span> CPG of Fall Risk</a></li>
@@ -241,13 +240,12 @@
             </div>
         </header>
         <div id="mobile-menu" class="absolute top-16 left-0 right-0 glass-dark text-slate-200 shadow-2xl hidden flex-col z-20 border-b border-white/10 md:hidden max-h-[calc(100vh-64px)] overflow-y-auto">
-            <a href="#" onclick="window.showDashboard('all'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📊</span> ภาพรวมทั้งหมด</a>
             <a href="#" onclick="window.showDashboard('bed-overview'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-sky-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🛏️</span> แผนผังเตียงผู้ป่วย</a>
+            <a href="#" onclick="window.showDashboard('all'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📊</span> ภาพรวมทั้งหมด</a>
             <a href="#" onclick="window.showDashboard('class'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-purple-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🗂️</span> จำแนกประเภทผู้ป่วย</a>
             <a href="#" onclick="window.showDashboard('fall'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-orange-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">⚠️</span> ประเมินหกล้ม</a>
             <a href="#" onclick="window.showDashboard('aws'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-blue-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🍷</span> ประเมิน AWS</a>
             <a href="#" onclick="window.showDashboard('braden'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-teal-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🛏️</span> ประเมิน Braden</a>
-            <a href="https://gemini.google.com/share/45538dbe7eb7" target="_blank" onclick="window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-indigo-300 font-bold bg-indigo-900/20 hover:bg-indigo-900/40 flex items-center gap-3"><span class="text-lg">✨</span> ผู้ช่วย AI (Gemini) <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>
             <a href="#" onclick="window.showDashboard('cpg'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-yellow-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📖</span> CPG of AWS</a>
             <a href="#" onclick="window.showDashboard('cpg-pi'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-pink-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🩹</span> CPG of Pressure Injury</a>
             <a href="#" onclick="window.showDashboard('cpg-fall'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-orange-400 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🚶</span> CPG of Fall Risk</a>
@@ -1217,7 +1215,7 @@
                 
                 onAuthStateChanged(auth, user => {
                     if (user) {
-                        window.showDashboard('all');
+                        window.showDashboard('bed-overview');
                         listenToAssessors();
                         loadPatientTablesOnHome();
                     }

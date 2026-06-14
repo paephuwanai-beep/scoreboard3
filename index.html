@@ -2014,8 +2014,11 @@ window.openBedActionModal = (pid) => {
                     </div>`;
             } else if (type === 'aws') {
                  html += `<div class="card border-t-4 border-blue-600 shadow-xl glass">
-                        <div class="border-b border-white/60 pb-4 mb-6"><h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-blue-600 text-2xl">🍷</span> แบบประเมินกลุ่มอาการถอนพิษสุรา</h3><p class="text-slate-600 text-sm mt-1 font-medium drop-shadow-sm">Clinical Institute Withdrawal Assessment for Alcohol (CIWA-Ar)</p></div>
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                         <div class="border-b border-white/60 pb-4 mb-6">
+                         <h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-blue-600 text-2xl">🍷</span> แบบประเมินกลุ่มอาการถอนพิษสุรา (AWS)</h3>
+                         <p class="text-slate-500 text-[11.5px] mt-1.5 font-medium drop-shadow-sm leading-relaxed"><b>ที่มา:</b> แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561</p>
+</div>
+                       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div class="lg:col-span-2"><form id="aws-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">${renderSelects(assessmentDicts.aws, 'aws')}</form>
                                 <div class="bg-blue-50/60 backdrop-blur-sm p-5 rounded-2xl border border-blue-200/50 mt-6 shadow-inner">
                                     <h4 class="font-extrabold text-blue-900 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d">📝</span> ข้อมูลเพิ่มเติม (ไม่คำนวณคะแนน)</h4>
@@ -2032,8 +2035,10 @@ window.openBedActionModal = (pid) => {
                     </div>`;
             } else if (type === 'braden') {
                  html += `<div class="card border-t-4 border-teal-500 shadow-xl glass">
-                 <div class="border-b border-white/60 pb-4 mb-6"><h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-teal-600 text-2xl">🛏️</span> แบบประเมินความเสี่ยงเกิดแผลกดทับ</h3><p class="text-slate-600 text-sm mt-1 font-medium drop-shadow-sm">Braden Scale for Predicting Pressure Sore Risk</p></div>
-                 <form id="braden-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">${renderSelects(assessmentDicts.braden, 'braden')}</form>
+    <div class="border-b border-white/60 pb-4 mb-6">
+    <h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-teal-600 text-2xl">🛏️</span> แบบประเมินความเสี่ยงเกิดแผลกดทับ (Braden Scale)</h3>
+    <p class="text-slate-500 text-[11.5px] mt-1.5 font-medium drop-shadow-sm leading-relaxed"><b>ที่มา:</b> แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556</p>
+</div>                 <form id="braden-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">${renderSelects(assessmentDicts.braden, 'braden')}</form>
                  <div class="bg-teal-50/60 backdrop-blur-sm p-6 rounded-2xl border border-teal-200/50 mt-8 shadow-inner">
                      <h4 class="font-extrabold text-teal-900 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d">🩹</span> บันทึกข้อมูลแผลกดทับที่พบ (ไม่คำนวณคะแนน)</h4>
                      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -2480,7 +2485,7 @@ window.openBedActionModal = (pid) => {
         }
 
         // --- PDF Print Generators ---
-        window.printPatientSummary = async (type, pid) => {
+       window.printPatientSummary = async (type, pid) => {
             if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
             showToast('กำลังประมวลผล PDF สรุป...', 'info');
             try {
@@ -2496,9 +2501,13 @@ window.openBedActionModal = (pid) => {
                 container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
                 const titles = { class: 'จำแนกประเภทผู้ป่วย', fall: 'ความเสี่ยงหกล้ม', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
                 
-                let html = `<h2 style="text-align:center; font-size:24px; font-weight:bold;">สรุปประวัติ ${titles[type]}</h2>
-                <div style="background:#f8fafc; padding:15px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:20px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} | <strong>HN:</strong> ${patient.hn} | <strong>เตียง:</strong> ${patient.bed||'-'}
+                // แก้ไขการจัดรูปแบบระยะห่างหัวกระดาษตรงนี้
+                let html = `
+                <div style="text-align:center; margin-bottom: 25px; padding-top: 10px;">
+                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">สรุปประวัติ ${titles[type]}</h2>
+                </div>
+                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
                 </div>
                 <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
                     <tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:10px;">วันที่ / เวลา</th><th style="border:1px solid #cbd5e1; padding:10px;">คะแนน</th><th style="border:1px solid #cbd5e1; padding:10px; text-align:left;">ผลลัพธ์</th><th style="border:1px solid #cbd5e1; padding:10px;">ผู้ประเมิน</th></tr>`;
@@ -2537,9 +2546,13 @@ window.openBedActionModal = (pid) => {
                 container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
                 const titles = { class: 'จำแนกประเภทผู้ป่วย', fall: 'ความเสี่ยงหกล้ม', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
                 
-                let html = `<h2 style="text-align:center; font-size:24px; font-weight:bold;">ประวัติละเอียด ${titles[type]}</h2>
-                <div style="background:#f8fafc; padding:15px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:20px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} | <strong>HN:</strong> ${patient.hn} | <strong>เตียง:</strong> ${patient.bed||'-'}
+                // แก้ไขการจัดรูปแบบระยะห่างหัวกระดาษตรงนี้
+                let html = `
+                <div style="text-align:center; margin-bottom: 25px; padding-top: 10px;">
+                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">ประวัติละเอียด ${titles[type]}</h2>
+                </div>
+                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
                 </div>`;
                 
                 let dict = {}; let labels = {};
@@ -2558,8 +2571,8 @@ window.openBedActionModal = (pid) => {
                         <div style="padding:15px; font-size:13px;">
                             <div style="margin-bottom:8px;"><strong>ผู้ประเมิน:</strong> ${a.assessor}</div>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
-                   if(a.details) {
-                        // ดึง Keys ออกมาและทำการจัดเรียงตามตัวเลขนำหน้า Label
+                    
+                    if(a.details) {
                         let detailsKeys = Object.keys(a.details);
                         detailsKeys.sort((k1, k2) => {
                             let l1 = labels[k1] || k1;
@@ -2568,15 +2581,12 @@ window.openBedActionModal = (pid) => {
                                 l1 = (a.mode === 'adult' ? fieldLabels.classAdult : fieldLabels.classChild)[k1] || k1;
                                 l2 = (a.mode === 'adult' ? fieldLabels.classAdult : fieldLabels.classChild)[k2] || k2;
                             }
-                            // ดึงตัวเลขจากหน้าข้อความ เช่น "11. การทำความสะอาด" จะได้ 11
                             let num1 = parseInt(l1.match(/^\d+/)) || 999;
                             let num2 = parseInt(l2.match(/^\d+/)) || 999;
-                            
                             if (num1 !== num2) return num1 - num2;
                             return l1.localeCompare(l2);
                         });
 
-                        // นำมาสร้าง HTML ตามลำดับที่เรียงแล้ว
                         detailsKeys.forEach(k => {
                             let labelName = labels[k] || k;
                             if (type === 'class') labelName = (a.mode === 'adult' ? fieldLabels.classAdult : fieldLabels.classChild)[k] || k;

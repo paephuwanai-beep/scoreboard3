@@ -1770,7 +1770,7 @@ window.openBedActionModal = (pid) => {
             } catch (err) { showToast('ดึงข้อมูลล้มเหลว', 'error'); }
         }
 
-        window.syncAllPatientsFromSheet = async () => {
+       window.syncAllPatientsFromSheet = async () => {
             if (!auth.currentUser) {
                 showToast("กรุณาเข้าสู่ระบบ (เลือกผู้ใช้งาน) ก่อนซิงค์ข้อมูล", "error");
                 window.openLoginModal();
@@ -1778,46 +1778,96 @@ window.openBedActionModal = (pid) => {
             }
             const sheetId = '1t0xSegQ7aXqDixeMh5kRbrrQOh_T30d7qbKeNqFhzvQ';
             const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&sheet=ชีต1`;
-            showToast('กำลังดึงข้อมูลทั้งหมดจาก G-Sheet...', 'info');
+            showToast('กำลังซิงค์ข้อมูลผู้ป่วยจาก G-Sheet...', 'info');
+            
             try {
                 const response = await fetch(url);
                 const text = await response.text();
                 const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
                 const data = JSON.parse(jsonText);
+                
                 let syncCount = 0;
+                let dischargeCount = 0;
                 const batch = writeBatch(db);
+                
+                // 1. ดึงรายชื่อผู้ป่วยที่สถานะ "Admit อยู่" ในระบบปัจจุบันมาเทียบ
                 const existingPatients = window.allPatientsList || [];
+                const activePatients = existingPatients.filter(p => p.status === 'Admit อยู่');
+                const incomingHNs = new Set(); // เซ็ตสำหรับเก็บ HN ที่พบใน Sheet
+                
                 if (data && data.table && data.table.rows) {
+                    // 2. ประมวลผลข้อมูลที่เข้ามาจาก Sheet (รับใหม่ & อัปเดตเตียง)
                     for (const row of data.table.rows) {
                         if (!row || !row.c) continue;
+                        
                         const bedVal = row.c[1]?.v;
                         const bedStr = bedVal != null ? String(bedVal).trim() : '';
+                        
                         if (bedStr !== '') {
                             const an = row.c[2]?.v != null ? String(row.c[2]?.v).trim() : '';
                             const name = row.c[3]?.v != null ? String(row.c[3]?.v).trim() : '';
                             const diagnosis = row.c[4]?.v != null ? String(row.c[4]?.v).trim() : '';
                             const hn = row.c[26]?.v != null ? String(row.c[26]?.v).trim() : '';
+                            
                             if (hn && name) {
-                                const patientData = { bed: bedStr, hn: hn, an: an, name: name, diagnosis: diagnosis, status: 'Admit อยู่', updatedAt: serverTimestamp() };
+                                incomingHNs.add(hn); // เก็บ HN ไว้ว่าคนนี้ยังมีชื่ออยู่ในวอร์ด
+                                
+                                const patientData = { 
+                                    bed: bedStr, // อัปเดตเตียงอัตโนมัติหากมีการเปลี่ยนแปลง
+                                    hn: hn, 
+                                    an: an, 
+                                    name: name, 
+                                    diagnosis: diagnosis, 
+                                    status: 'Admit อยู่', 
+                                    updatedAt: serverTimestamp() 
+                                };
+                                
                                 const existing = existingPatients.find(p => p.id === hn || p.hn === hn);
                                 if (!existing) {
                                     patientData.classMode = 'adult'; 
                                     patientData.createdAt = serverTimestamp();
                                     patientData.admitDate = new Date().toISOString().split('T')[0];
                                 }
+                                
                                 const docRef = doc(db, `artifacts/${appId}/public/data/patients`, hn);
                                 batch.set(docRef, patientData, { merge: true });
                                 syncCount++;
                             }
                         }
                     }
-                    if (syncCount > 0) {
+                    
+                    // 3. จำหน่ายผู้ป่วย (D/C) อัตโนมัติ หากไม่มี HN นี้ใน Sheet แล้ว
+                    for (const activePatient of activePatients) {
+                        if (!incomingHNs.has(activePatient.hn)) {
+                            const docRef = doc(db, `artifacts/${appId}/public/data/patients`, activePatient.id || activePatient.hn);
+                            batch.update(docRef, {
+                                status: 'จำหน่ายแล้ว',
+                                dischargedAt: serverTimestamp(),
+                                updatedAt: serverTimestamp()
+                            });
+                            dischargeCount++;
+                        }
+                    }
+
+                    // 4. สั่ง Commit การทำงานทั้งหมดรวดเดียว
+                    if (syncCount > 0 || dischargeCount > 0) {
                         await batch.commit();
-                        showToast(`ซิงค์ข้อมูลสำเร็จ อัปเดต ${syncCount} รายการ`, 'success');
-                        if (window.currentDashboardView === 'bed-overview') setTimeout(() => window.renderBedOverview(), 500);
-                    } else showToast(`ไม่พบข้อมูลผู้ป่วยที่มีการระบุเลขเตียงในชีต`, 'info');
-                } else showToast('รูปแบบข้อมูลจากชีตไม่ถูกต้อง', 'error');
-            } catch (err) { console.error("Sync error:", err); showToast('ดึงข้อมูลล้มเหลว กรุณาตรวจสอบลิงก์', 'error'); }
+                        showToast(`อัปเดต ${syncCount} ราย | จำหน่ายอัตโนมัติ ${dischargeCount} ราย`, 'success');
+                        
+                        // รีเฟรชหน้าจอหากเปิดผังเตียงอยู่
+                        if (window.currentDashboardView === 'bed-overview') {
+                            setTimeout(() => window.renderBedOverview(), 500);
+                        }
+                    } else {
+                        showToast(`ไม่พบข้อมูลผู้ป่วยที่มีการระบุเลขเตียงในชีต`, 'info');
+                    }
+                } else {
+                    showToast('รูปแบบข้อมูลจากชีตไม่ถูกต้อง', 'error');
+                }
+            } catch (err) { 
+                console.error("Sync error:", err); 
+                showToast('ซิงค์ข้อมูลล้มเหลว กรุณาตรวจสอบลิงก์หรืออินเทอร์เน็ต', 'error'); 
+            }
         };
 
         window.openPatientModal = async (patientId = null) => {

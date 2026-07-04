@@ -1,4 +1,680 @@
-<!-- Firebase SDK & Logic -->
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IPD3 Score Board - Critical Care</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF and html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Google Fonts: Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f7f9; }
+        
+        /* Animated Background for Glassmorphism */
+        .bg-shapes { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; overflow: hidden; pointer-events: none; background: #eef2f6; }
+        .bg-shape { position: absolute; filter: blur(70px); border-radius: 50%; opacity: 0.7; animation: float 15s infinite ease-in-out alternate; }
+        .bg-shape-1 { background: #bae6fd; width: 45vw; height: 45vw; top: -10%; left: -10%; animation-delay: 0s; }
+        .bg-shape-2 { background: #e9d5ff; width: 40vw; height: 40vw; bottom: -5%; right: -5%; animation-delay: -5s; }
+        .bg-shape-3 { background: #fbcfe8; width: 35vw; height: 35vw; top: 30%; left: 35%; animation-delay: -10s; }
+        
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, -30px) scale(1.05); }
+            100% { transform: translate(-30px, 40px) scale(0.95); }
+        }
+
+        /* Core Glassmorphism Utilities */
+        .glass { background: rgba(255, 255, 255, 0.6) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.8) !important; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05) !important; }
+        .glass-dark { background: rgba(15, 23, 42, 0.65) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-color: rgba(255, 255, 255, 0.1) !important; }
+        
+        /* Overriding .card to be glass */
+        .card { background: rgba(255, 255, 255, 0.65); border-radius: 1.25rem; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 1.5rem; margin-bottom: 1.5rem; }
+
+        /* Inputs for Glassmorphism */
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.6rem 0.85rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.9); background-color: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); font-size: 0.95rem; transition: all 0.2s; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.02); }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #3b82f6; background-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        .dhf-check { width: 1.25rem; height: 1.25rem; accent-color: #dc2626; cursor: pointer; }
+        
+        /* Buttons */
+        .btn-primary { background: linear-gradient(to right, #2563eb, #3b82f6); color: white; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 12px -1px rgba(59, 130, 246, 0.4); }
+        .btn-danger { background: linear-gradient(to right, #dc2626, #ef4444); color: white; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3); border: 1px solid rgba(255,255,255,0.2); }
+        .btn-danger:hover { transform: translateY(-1px); }
+        .btn-warning { background: linear-gradient(to right, #d97706, #f59e0b); color: white; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-secondary { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(8px); color: #334155; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s; cursor: pointer; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .btn-secondary:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.9); box-shadow: 0 6px 10px -1px rgba(0, 0, 0, 0.1); }
+        
+        /* Modern 3D Icon styling */
+        .icon-3d { display: inline-block; filter: drop-shadow(1px 2px 2px rgba(0,0,0,0.15)); transform: perspective(100px) translateZ(5px); transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .icon-3d:hover { transform: perspective(100px) translateZ(15px) scale(1.15); }
+
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { padding: 1rem 1.5rem; border-radius: 1rem; color: white; opacity: 0; transform: translateX(100%); transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); margin-bottom: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); font-weight: 500; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2); }
+        .toast.show { opacity: 1; transform: translateX(0); }
+        .toast-success { background: linear-gradient(135deg, rgba(5, 150, 105, 0.9), rgba(16, 185, 129, 0.9)); }
+        .toast-error { background: linear-gradient(135deg, rgba(185, 28, 28, 0.9), rgba(239, 68, 68, 0.9)); }
+        .toast-info { background: linear-gradient(135deg, rgba(29, 78, 216, 0.9), rgba(59, 130, 246, 0.9)); }
+        
+        /* Modal - Glass */
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(15, 23, 42, 0.4); backdrop-filter: blur(8px); }
+        .modal-content { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.8); margin: 4% auto; padding: 2.5rem; width: 92%; max-width: 800px; border-radius: 1.5rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); animation: modalIn 0.3s forwards; }
+        @keyframes modalIn { to { transform: scale(1); } }
+        .close-btn { color: #94a3b8; float: right; font-size: 32px; font-weight: bold; cursor: pointer; line-height: 1; margin-top: -10px; transition: color 0.2s; }
+        .close-btn:hover { color: #0f172a; }
+        
+        .countdown-cell span { display: inline-block; min-width: 100px; font-variant-numeric: tabular-nums; }
+        .nav-item { transition: all 0.2s; }
+        .nav-item.active { background: rgba(255, 255, 255, 0.1); border-left-color: #60a5fa; color: white; font-weight: 600; box-shadow: inset 0 0 15px rgba(255,255,255,0.05); }
+
+        /* Dashboard Stat Cards */
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 15px 30px -5px rgba(0,0,0,0.1); }
+
+        /* Infographic styling */
+        .infographic-card { border-radius: 1.25rem; overflow: hidden; position: relative; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.6); }
+        .info-red { background: linear-gradient(135deg, rgba(254, 242, 242, 0.8) 0%, rgba(254, 226, 226, 0.8) 100%); border: 2px solid rgba(252, 165, 165, 0.6); }
+        .info-orange { background: linear-gradient(135deg, rgba(255, 247, 237, 0.8) 0%, rgba(255, 237, 213, 0.8) 100%); border: 2px solid rgba(253, 186, 116, 0.6); }
+        .info-green { background: linear-gradient(135deg, rgba(240, 253, 244, 0.8) 0%, rgba(220, 252, 231, 0.8) 100%); border: 2px solid rgba(134, 239, 172, 0.6); }
+        
+        /* Custom scrollbar */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .patient-nav-scroll { overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        .patient-nav-scroll::-webkit-scrollbar { height: 8px; }
+        .patient-nav-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .patient-nav-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .patient-nav-scroll::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+        
+        tbody tr { transition: background-color 0.15s; }
+        tbody tr:hover { background-color: rgba(255, 255, 255, 0.6) !important; }
+    </style>
+</head>
+<body class="antialiased text-gray-800 h-screen overflow-hidden flex">
+
+    <!-- Ambient Background blobs -->
+    <div class="bg-shapes">
+        <div class="bg-shape bg-shape-1"></div>
+        <div class="bg-shape bg-shape-2"></div>
+        <div class="bg-shape bg-shape-3"></div>
+    </div>
+
+    <div id="toast-container"></div>
+    
+    <!-- Generic Modal -->
+    <div id="appModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="window.closeModal()">&times;</span>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4 text-slate-800 border-b border-slate-200/60 pb-3"></h2>
+            <div id="modal-body" class="max-h-[65vh] overflow-y-auto pr-2 pb-2"></div>
+            <div id="modal-footer" class="mt-6 flex justify-end gap-3 pt-4 border-t border-slate-200/60"></div>
+        </div>
+    </div>
+
+    <!-- Sidebar Layout (Glass Dark) -->
+    <aside class="w-64 glass-dark text-slate-300 flex-col hidden md:flex shadow-2xl z-20 h-full flex-shrink-0 transition-all duration-300 border-r border-white/10">
+        <div class="h-16 flex items-center px-6 border-b border-white/10 bg-transparent justify-between">
+            <div class="flex items-center gap-3 text-blue-400">
+                <div class="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 rounded-lg text-white shadow-lg shadow-blue-500/30 border border-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                </div>
+                <span class="font-extrabold text-xl tracking-tight text-white drop-shadow">IPD3 Score</span>
+            </div>
+        </div>
+        
+        <!-- User Profile Quick Login in Sidebar -->
+        <div class="px-6 py-4 border-b border-white/10 bg-white/5">
+            <div class="text-xs text-slate-400 mb-2 font-medium tracking-wide">ผู้ใช้งานปัจจุบัน</div>
+            <button onclick="window.openLoginModal()" class="w-full flex items-center gap-3 bg-white/10 hover:bg-white/20 border border-white/10 text-white px-3 py-2.5 rounded-xl text-sm transition-all shadow-sm group backdrop-blur-md">
+                <div class="bg-black/20 p-1.5 rounded-lg group-hover:bg-black/30 transition-colors">
+                    <span class="text-lg leading-none">👤</span>
+                </div>
+                <span id="active-user-name-desktop" class="font-bold truncate text-left flex-1">เข้าสู่ระบบ</span>
+            </button>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-2 drop-shadow-sm">เมนูหลัก (แดชบอร์ด)</li>
+                <li><a href="#" onclick="window.showDashboard('bed-overview')" id="nav-bed-overview" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🛏️</span> แผนผังเตียงผู้ป่วย</a></li>
+                <li><a href="#" onclick="window.showDashboard('all')" id="nav-all" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📊</span> ภาพรวมทั้งหมด</a></li>
+                <li><a href="#" onclick="window.showDashboard('dhf')" id="nav-dhf" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🩸</span> ประเมิน DHF (วิกฤต)</a></li>
+                <li><a href="#" onclick="window.showDashboard('aws')" id="nav-aws" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🍷</span> ถอนพิษสุรา (AWS)</a></li>
+                <li><a href="#" onclick="window.showDashboard('braden')" id="nav-braden" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🛏️</span> แผลกดทับ (Braden)</a></li>
+                
+                <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">คู่มือและผู้ช่วย</li>
+                <li><a href="#" onclick="window.showDashboard('cpg-dhf')" id="nav-cpg-dhf" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🦟</span> CPG of DHF</a></li>
+                <li><a href="#" onclick="window.showDashboard('cpg')" id="nav-cpg" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📖</span> CPG of AWS</a></li>
+                <li><a href="#" onclick="window.showDashboard('cpg-pi')" id="nav-cpg-pi" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">🩹</span> CPG of Pressure Injury</a></li>
+
+                <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">แฟ้มประวัติ</li>
+                <li><a href="#" onclick="window.showDashboard('discharged')" id="nav-discharged" class="nav-item flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors border-l-4 border-transparent gap-3"><span class="text-xl icon-3d">📁</span> ผู้ป่วยจำหน่ายแล้ว (D/C)</a></li>
+
+                <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">ตั้งค่าระบบ</li>
+                <li><a href="#" onclick="window.openAssessorManagementModal()" class="flex items-center px-6 py-3 text-sm hover:bg-white/5 transition-colors gap-3"><span class="text-xl icon-3d">⚙️</span> จัดการผู้ประเมิน</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Mobile Header & Menu -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden w-full relative z-10">
+        <header class="h-16 glass-dark shadow-lg flex items-center justify-between px-4 md:hidden z-30 shrink-0 border-b border-white/10">
+            <div class="flex items-center gap-2 text-blue-400">
+                <span class="font-extrabold text-lg text-white drop-shadow">IPD3 Score</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="window.openLoginModal()" class="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/10 text-white px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-sm backdrop-blur-md">
+                    <span class="text-sm leading-none">👤</span>
+                    <span id="active-user-name-mobile" class="max-w-[80px] truncate">เข้าสู่ระบบ</span>
+                </button>
+                <button class="text-slate-300 hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors" onclick="window.toggleMobileMenu()">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+            </div>
+        </header>
+        <div id="mobile-menu" class="absolute top-16 left-0 right-0 glass-dark text-slate-200 shadow-2xl hidden flex-col z-20 border-b border-white/10 md:hidden max-h-[calc(100vh-64px)] overflow-y-auto">
+            <a href="#" onclick="window.showDashboard('bed-overview'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-sky-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🛏️</span> แผนผังเตียงผู้ป่วย</a>
+            <a href="#" onclick="window.showDashboard('all'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📊</span> ภาพรวมทั้งหมด</a>
+            <a href="#" onclick="window.showDashboard('dhf'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-red-400 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🩸</span> ประเมิน DHF (วิกฤต)</a>
+            <a href="#" onclick="window.showDashboard('aws'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-blue-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🍷</span> ประเมิน AWS</a>
+            <a href="#" onclick="window.showDashboard('braden'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-teal-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🛏️</span> ประเมิน Braden</a>
+            <a href="#" onclick="window.showDashboard('cpg-dhf'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-red-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🦟</span> CPG of DHF</a>
+            <a href="#" onclick="window.showDashboard('cpg'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-yellow-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📖</span> CPG of AWS</a>
+            <a href="#" onclick="window.showDashboard('cpg-pi'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-pink-300 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">🩹</span> CPG of Pressure Injury</a>
+            <a href="#" onclick="window.showDashboard('discharged'); window.toggleMobileMenu()" class="px-6 py-4 text-gray-400 hover:bg-white/5 flex items-center gap-3"><span class="text-lg">📁</span> ผู้ป่วยจำหน่ายแล้ว</a>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8" id="main-scroll-area">
+            <div class="max-w-[1600px] mx-auto">
+                
+                <!-- DASHBOARD PAGE -->
+                <div id="page-home" class="animate-fade-in">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h1 id="dashboard-title" class="text-3xl font-extrabold text-slate-800 tracking-tight drop-shadow-sm">Executive Dashboard</h1>
+                            <p id="dashboard-subtitle" class="text-slate-600 font-medium mt-1">ภาพรวมผู้ป่วยรับใหม่และการเฝ้าระวังความเสี่ยง</p>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button onclick="window.syncAllPatientsFromSheet()" class="btn-secondary text-sm shadow-md flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border border-white/30 flex-1 md:flex-none transition-transform hover:-translate-y-1">
+                                <span class="icon-3d text-lg drop-shadow">🔄</span> <span class="font-bold drop-shadow">ดึงรายชื่อผู้ป่วยทั้งหมด (Sync all)</span>
+                            </button>
+                            <button id="main-add-patient-btn" class="btn-primary text-sm shadow-md flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl flex-1 md:flex-none transition-transform hover:-translate-y-1" onclick="window.openPatientModal()">
+                                <span class="icon-3d text-lg drop-shadow">➕</span> <span class="font-bold drop-shadow">เพิ่มรายบุคคล</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="dashboard-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        
+                        <!-- DHF Table -->
+                        <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col xl:col-span-2">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-red-600 p-1.5 rounded-lg shadow-sm icon-3d border-red-200/50">🩸</span> เฝ้าระวัง DHF ระยะวิกฤต <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
+                                <button class="bg-red-50/80 hover:bg-red-100/90 text-red-700 border border-red-200/50 transition-colors px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm flex items-center gap-1 backdrop-blur-sm" onclick="window.openEnrollModal('dhf')">
+                                    <span class="text-lg leading-none">+</span> นำเข้าตาราง
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-white/60 flex-1 glass shadow-sm"><table class="w-full text-sm text-left"><thead class="text-xs text-slate-700 bg-white/40 uppercase tracking-wider border-b border-white/60"><tr><th class="px-4 py-3 font-bold">เตียง/HN</th><th class="px-4 py-3 font-bold">ชื่อผู้ป่วย</th><th class="px-4 py-3 font-bold text-center">ความเสี่ยงช็อก</th><th class="px-4 py-3 font-bold">รอบประเมินถัดไป</th><th class="px-4 py-3 font-bold text-center">จัดการ</th></tr></thead><tbody id="home-dhf-body" class="divide-y divide-white/40"></tbody></table></div>
+                        </div>
+
+                        <!-- AWS Table -->
+                        <div id="dashboard-aws-section" class="card border-t-4 border-blue-500 !mb-0 flex flex-col">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-blue-600 p-1.5 rounded-lg shadow-sm icon-3d border-blue-200/50">🍷</span> ถอนพิษสุรา (AWS) <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
+                                <button class="bg-blue-50/80 hover:bg-blue-100/90 text-blue-700 border border-blue-200/50 transition-colors px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm flex items-center gap-1 backdrop-blur-sm" onclick="window.openEnrollModal('aws')">
+                                    <span class="text-lg leading-none">+</span> นำเข้าตาราง
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-white/60 flex-1 glass shadow-sm"><table class="w-full text-sm text-left"><thead class="text-xs text-slate-700 bg-white/40 uppercase tracking-wider border-b border-white/60"><tr><th class="px-4 py-3 font-bold">เตียง/HN</th><th class="px-4 py-3 font-bold">ชื่อผู้ป่วย</th><th class="px-4 py-3 font-bold text-center">คะแนน</th><th class="px-4 py-3 font-bold">รอบประเมินถัดไป</th><th class="px-4 py-3 font-bold text-center">จัดการ</th></tr></thead><tbody id="home-aws-body" class="divide-y divide-white/40"></tbody></table></div>
+                        </div>
+                        
+                        <!-- Braden Table -->
+                        <div id="dashboard-braden-section" class="card border-t-4 border-teal-500 !mb-0 flex flex-col">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+                                <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-teal-600 p-1.5 rounded-lg shadow-sm icon-3d border-teal-200/50">🛏️</span> แผลกดทับ (Braden) <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
+                                <button class="bg-teal-50/80 hover:bg-teal-100/90 text-teal-700 border border-teal-200/50 transition-colors px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm flex items-center gap-1 backdrop-blur-sm" onclick="window.openEnrollModal('braden')">
+                                    <span class="text-lg leading-none">+</span> นำเข้าตาราง
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-white/60 flex-1 glass shadow-sm"><table class="w-full text-sm text-left"><thead class="text-xs text-slate-700 bg-white/40 uppercase tracking-wider border-b border-white/60"><tr><th class="px-4 py-3 font-bold">เตียง/HN</th><th class="px-4 py-3 font-bold">ชื่อผู้ป่วย</th><th class="px-4 py-3 font-bold text-center">คะแนน</th><th class="px-4 py-3 font-bold">รอบประเมินถัดไป</th><th class="px-4 py-3 font-bold text-center">จัดการ</th></tr></thead><tbody id="home-braden-body" class="divide-y divide-white/40"></tbody></table></div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- BED OVERVIEW PAGE -->
+                <div id="page-bed-overview" class="hidden animate-fade-in pb-10">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <div>
+                            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2 drop-shadow-sm"><span class="icon-3d">🛏️</span> แผนผังเตียงผู้ป่วย</h1>
+                            <p class="text-slate-600 font-medium mt-1">ตรวจสอบสถานะเตียงว่าง และข้อมูลผู้ป่วยเบื้องต้น</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
+                            <button onclick="window.syncAllPatientsFromSheet()" class="btn-secondary text-sm shadow-md flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white border border-white/30 w-full sm:w-auto transition-transform hover:-translate-y-1">
+                                <span class="icon-3d text-lg drop-shadow">🔄</span> <span class="font-bold drop-shadow">ดึงรายชื่อผู้ป่วยทั้งหมด (Sync all)</span>
+                            </button>
+                            <div class="flex gap-3 text-xs font-bold text-slate-600 glass px-4 py-2.5 rounded-xl shadow-sm border border-white/60 w-full sm:w-auto justify-center">
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-600 shadow-sm border border-white/50"></span> วิกฤต DHF/Shock</div>
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-600 shadow-sm border border-white/50"></span> AWS รุนแรง</div>
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-teal-500 shadow-sm border border-white/50"></span> แผลกดทับเสี่ยงสูง</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Summary Cards Section -->
+                    <div id="dashboard-summary-cards" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <div class="stat-card glass rounded-2xl p-5 border border-white/60 shadow-sm relative overflow-hidden flex flex-col justify-between h-full">
+                            <div class="absolute -right-4 -top-4 text-blue-500/10"><svg class="w-24 h-24" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg></div>
+                            <div class="text-slate-600 font-bold text-sm flex items-center gap-2 relative z-10"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block shadow-sm"></span>ผู้ป่วย Admit ทั้งหมด</div>
+                            <div class="mt-4 flex items-baseline gap-2 relative z-10">
+                                <span class="text-5xl font-black text-slate-800 drop-shadow-sm" id="stat-total-patients">0</span>
+                                <span class="text-slate-500 font-bold">ราย</span>
+                            </div>
+                        </div>
+                        <div class="stat-card bg-gradient-to-br from-red-500/80 to-rose-600/80 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-md relative overflow-hidden flex flex-col justify-between h-full text-white">
+                            <div class="absolute -right-2 -bottom-2 text-white/20"><svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg></div>
+                            <div class="font-bold text-sm flex items-center gap-2 relative z-10 text-rose-50"><span class="text-lg drop-shadow">🩸</span> เฝ้าระวัง DHF ระยะวิกฤต</div>
+                            <div class="mt-4 flex items-baseline gap-2 relative z-10">
+                                <span class="text-5xl font-black drop-shadow-md" id="stat-dhf-risk">0</span>
+                                <span class="text-rose-100 font-bold opacity-90">ราย</span>
+                            </div>
+                        </div>
+                        <div class="stat-card bg-gradient-to-br from-blue-600/80 to-indigo-700/80 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-md relative overflow-hidden flex flex-col justify-between h-full text-white">
+                            <div class="absolute -right-2 -bottom-2 text-white/10"><svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                            <div class="font-bold text-sm flex items-center gap-2 relative z-10 text-blue-50"><span class="text-lg drop-shadow">🍷</span> เฝ้าระวังถอนพิษสุรา</div>
+                            <div class="mt-4 flex items-baseline gap-2 relative z-10">
+                                <span class="text-5xl font-black drop-shadow-md" id="stat-aws-risk">0</span>
+                                <span class="text-blue-100 font-bold opacity-90">ราย</span>
+                            </div>
+                        </div>
+                        <div class="stat-card bg-gradient-to-br from-teal-500/80 to-emerald-600/80 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-md relative overflow-hidden flex flex-col justify-between h-full text-white">
+                            <div class="absolute -right-2 -bottom-2 text-white/20"><svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path></svg></div>
+                            <div class="font-bold text-sm flex items-center gap-2 relative z-10 text-teal-50"><span class="text-lg drop-shadow">🛏️</span> เฝ้าระวังแผลกดทับ</div>
+                            <div class="mt-4 flex items-baseline gap-2 relative z-10">
+                                <span class="text-5xl font-black drop-shadow-md" id="stat-braden-risk">0</span>
+                                <span class="text-teal-100 font-bold opacity-90">ราย</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="bed-grid-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7 gap-4"></div>
+                </div>
+
+                <!-- CPG Wrapper (Solid Background) -->
+                <div id="cpg-wrapper" class="hidden">
+                    <style>
+                        .cpg-solid-container { background-color: #f4f7f9 !important; border-radius: 1rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); position: relative; z-index: 50; }
+                        @media (max-width: 768px) { .cpg-solid-container { padding: 1rem; } }
+                    </style>
+                </div>
+
+                <!-- CPG DHF PAGE -->
+                <div id="page-cpg-dhf" class="hidden animate-fade-in pb-10 cpg-solid-container mt-0">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><span class="icon-3d text-3xl">🦟</span> CPG of Dengue Fever (DHF)</h1>
+                        <button onclick="window.printCpgGeneric('cpg-dhf-content-container', 'CPG_DHF.pdf')" class="btn-primary text-sm shadow-md bg-red-600 hover:bg-red-700 flex items-center gap-2"><span class="icon-3d">🖨️</span> บันทึกภาพ (PDF)</button>
+                    </div>
+                    <div id="cpg-dhf-content-container">
+                        <div class="bg-red-800 text-white p-5 text-center rounded-t-xl shadow-md border-b-4 border-red-400">
+                            <h2 class="text-2xl font-bold tracking-wide mb-1">แนวทางเวชปฏิบัติการดูแลผู้ป่วยโรคไข้เลือดออก (DHF)</h2>
+                            <p class="text-red-200 text-sm">Clinical Practice Guideline for Dengue Infection</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 border-x border-b border-gray-300 rounded-b-xl shadow-md mb-8">
+                            <h3 class="text-xl font-bold text-red-800 border-b-2 border-red-200 pb-2 mb-4 flex items-center gap-2"><span class="icon-3d">🚨</span> Warning Signs (สัญญาณเตือน)</h3>
+                            <ul class="list-disc pl-5 space-y-2 text-gray-800 font-medium mb-8">
+                                <li>Clinical fluid accumulation (พบน้ำในช่องเยื่อหุ้มปอด หรือ ช่องท้อง)</li>
+                                <li>Liver enlargement > 2 cm (ตับโต กดเจ็บ)</li>
+                                <li>Mucosal bleed (เลือดออกตามเยื่อบุต่างๆ เลือดกำเดา อาเจียนเป็นเลือด)</li>
+                                <li>Lethargy, restlessness (ซึม กระสับกระส่าย)</li>
+                                <li>Abdominal pain or tenderness (ปวดท้องรุนแรง)</li>
+                                <li>Persistent vomiting (อาเจียนต่อเนื่อง)</li>
+                                <li>Hct เพิ่มขึ้นพร้อมกับ Platelet ลดลงอย่างรวดเร็ว</li>
+                            </ul>
+
+                            <h3 class="text-xl font-bold text-red-800 border-b-2 border-red-200 pb-2 mb-4 flex items-center gap-2"><span class="icon-3d">💧</span> Management of DHF with Warning Signs</h3>
+                            <div class="bg-red-50 p-4 rounded-lg border border-red-200 text-gray-800 font-medium mb-8 space-y-3">
+                                <p>1. <b>Admit</b> ติดตามอาการอย่างใกล้ชิด</p>
+                                <p>2. <b>IV Fluid:</b> Isotonic crystalloid (NSS, 5%DN/2, Ringer's Acetate/Lactate) เริ่ม 5-7 ml/kg/hr นาน 1-2 ชั่วโมง</p>
+                                <p>3. <b>ประเมินซ้ำ (Reassess):</b></p>
+                                <ul class="list-inside list-disc pl-4 space-y-1">
+                                    <li>ถ้าอาการดีขึ้น (Hct ลดลง, V/S คงที่, Urine > 0.5 cc/kg/hr): ลด IV fluid เป็น 3-5 ml/kg/hr (2-4 ชม.) -> 2-3 ml/kg/hr -> หยุด IV</li>
+                                    <li>ถ้าอาการไม่ดีขึ้น (V/S ยังไม่คงที่): เพิ่ม IV fluid เป็น 5-10 ml/kg/hr (1-2 ชม.) และรายงานแพทย์</li>
+                                </ul>
+                            </div>
+                            
+                            <h3 class="text-xl font-bold text-red-800 border-b-2 border-red-200 pb-2 mb-4 flex items-center gap-2"><span class="icon-3d">⚠️</span> Severe Dengue (Shock / Bleeding / Organ Impairment)</h3>
+                            <div class="bg-red-100 p-4 rounded-lg border border-red-300 text-red-900 font-bold mb-8 space-y-3">
+                                <p>1. <b>Compensated Shock</b> (BP ปกติ แต่ Pulse pressure ≤ 20 mmHg หรือ HR เร็ว/เบา, ปลายมือเย็น):</p>
+                                <ul class="list-inside list-disc pl-4 font-medium text-red-800">
+                                    <li>Fluid resuscitation: Isotonic crystalloid 10-20 ml/kg/hr ใน 1 ชั่วโมงแรก</li>
+                                </ul>
+                                <p class="mt-3">2. <b>Hypotensive Shock</b> (BP ตก หรือคลำชีพจรไม่ได้):</p>
+                                <ul class="list-inside list-disc pl-4 font-medium text-red-800">
+                                    <li>Fluid resuscitation: Isotonic crystalloid หรือ Colloid 20 ml/kg ภายใน 15-30 นาที</li>
+                                    <li>เตรียมให้เลือด (PRC/Whole blood) หากสงสัยมีเลือดออกซ่อนเร้น (Hct ลดลงรวดเร็ว)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CPG AWS PAGE -->
+                <div id="page-cpg" class="hidden animate-fade-in pb-10 cpg-solid-container mt-0">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><span class="icon-3d text-3xl">📖</span> CPG of AWS</h1>
+                        <button onclick="window.printCpgGeneric('cpg-content-container', 'CPG_AWS.pdf')" class="btn-primary text-sm shadow-md bg-blue-600 hover:bg-blue-700 flex items-center gap-2"><span class="icon-3d">🖨️</span> บันทึกภาพ (PDF)</button>
+                    </div>
+                    <div id="cpg-content-container">
+                        <div class="bg-[#1e3a8a] text-white p-4 text-center rounded-t-xl shadow-md border-b-4 border-yellow-400">
+                            <h2 class="text-xl font-bold tracking-wide">กรมสุขภาพจิต กระทรวงสาธารณสุข | Clinical Practice Guideline</h2>
+                        </div>
+                        <div class="bg-slate-100 p-4 md:p-6 border-x border-b border-gray-300 rounded-b-xl shadow-md mb-8 space-y-4">
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div class="space-y-4">
+                                    <div class="bg-[#0f766e] rounded-lg overflow-hidden shadow-sm border border-[#0f766e]">
+                                        <div class="text-white font-bold text-center py-2 text-lg">การประเมิน CIWA-Ar Scale</div>
+                                        <div class="flex bg-white p-2 text-center gap-2">
+                                            <div class="flex-1 border-2 border-green-500 rounded p-2 bg-green-50 flex flex-col justify-center"><span class="text-green-700 font-bold text-xs mb-1">เล็กน้อย (Mild)</span><span class="text-3xl font-black text-green-600"><= 8</span><span class="text-[10px] text-gray-500 mt-1">คะแนน</span></div>
+                                            <div class="flex-1 border-2 border-orange-400 rounded p-2 bg-orange-50 flex flex-col justify-center"><span class="text-orange-700 font-bold text-xs mb-1">ปานกลาง (Moderate)</span><span class="text-3xl font-black text-orange-500">9-15</span><span class="text-[10px] text-gray-500 mt-1">คะแนน</span></div>
+                                            <div class="flex-1 border-2 border-red-500 rounded p-2 bg-red-50 flex flex-col justify-center"><span class="text-red-700 font-bold text-xs mb-1">รุนแรง (Severe)</span><span class="text-3xl font-black text-red-600">>= 16</span><span class="text-[10px] text-gray-500 mt-1">คะแนน</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#ecfdf5] border-2 border-[#34d399] rounded-lg p-3 shadow-sm">
+                                        <div class="text-[#065f46] font-bold text-center mb-2 text-sm border-b border-[#6ee7b7] pb-2">รายการประเมิน CIWA-Ar (10 อาการ)</div>
+                                        <div class="grid grid-cols-2 gap-2 text-[13px] text-gray-800 font-medium"><div>1. คลื่นไส้ / อาเจียน</div><div>6. ประสาทหลอน (Visual)</div><div>2. มือสั่น (Tremor)</div><div>7. ความวิตกกังวล</div><div>3. เหงื่อออก</div><div>8. ความปั่นป่วน</div><div>4. ประสาทหลอน (Tactile)</div><div>9. ปวดศีรษะ</div><div>5. ประสาทหลอน (Auditory)</div><div>10. สับสน / ไม่รู้สถานที่</div></div>
+                                    </div>
+                                    <div class="bg-[#2563eb] rounded-lg overflow-hidden shadow-sm border border-[#2563eb]">
+                                        <div class="text-white font-bold text-center py-2 text-sm">เกณฑ์การรับไว้ในโรงพยาบาล (Admit)</div>
+                                        <ul class="bg-[#eff6ff] p-4 text-[13px] text-gray-800 space-y-2 list-disc pl-6 font-medium"><li>CIWA-Ar >= 16 คะแนน</li><li>มีประวัติชักหรือ Delirium Tremens มาก่อน</li><li>โรคร่วมรุนแรง (ตับ, หัวใจ, ติดเชื้อ)</li><li>ไม่มีผู้ดูแลที่บ้าน / รับประทานยาไม่ได้</li><li>อาการไม่ดีขึ้นหลังการรักษาเบื้องต้น</li></ul>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="bg-[#1d4ed8] rounded-lg overflow-hidden shadow-sm border border-[#1d4ed8]">
+                                        <div class="text-white font-bold text-center py-2 text-lg">ระยะเวลาและอาการ AWS</div>
+                                        <div class="bg-white p-2 flex flex-col sm:flex-row gap-2 text-[12px] relative">
+                                            <div class="flex-1 border-2 border-green-500 rounded p-2 z-10 bg-[#f0fdf4]"><div class="bg-[#22c55e] text-white text-center font-bold py-1 rounded mb-1 shadow-sm text-sm">ระยะที่ 1</div><div class="text-[#15803d] text-center mb-2 font-black text-sm">6-24 ชม.</div><div class="text-left text-gray-800 font-medium leading-tight">- มือสั่น, เหงื่อออก<br>- ใจสั่น, คลื่นไส้<br>- นอนไม่หลับ<br>- ความดันสูง</div></div>
+                                            <div class="flex-1 border-2 border-orange-400 rounded p-2 z-10 bg-[#fff7ed]"><div class="bg-[#f97316] text-white text-center font-bold py-1 rounded mb-1 shadow-sm text-sm">ระยะที่ 2</div><div class="text-[#c2410c] text-center mb-2 font-black text-sm">24-48 ชม.</div><div class="text-left text-gray-800 font-medium leading-tight">- ชัก (Seizure)<br>- Tonic-clonic seizure<br>- เสี่ยงสูงในผู้มีประวัติชักมาก่อน</div></div>
+                                            <div class="flex-1 border-2 border-red-500 rounded p-2 z-10 bg-[#fef2f2]"><div class="bg-[#ef4444] text-white text-center font-bold py-1 rounded mb-1 shadow-sm text-sm">ระยะที่ 3</div><div class="text-[#b91c1c] text-center mb-2 font-black text-sm">48-72 ชม.</div><div class="text-left text-gray-800 font-medium leading-tight">- Delirium Tremens<br>- สับสน, ประสาทหลอน<br>- ไข้สูง, เหงื่อออกมาก<br>- ชีพจรเร็ว</div></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#dc2626] rounded-lg overflow-hidden shadow-sm border border-[#dc2626] flex flex-col h-full">
+                                        <div class="text-white font-bold text-center py-2 text-[15px]">[!] ภาวะฉุกเฉิน: Delirium Tremens</div>
+                                        <div class="bg-[#fef2f2] p-4 flex-1">
+                                            <ol class="text-[13px] text-gray-900 space-y-2 list-decimal pl-5 font-bold mb-0"><li>Diazepam 10 mg IV ช้าๆ ซ้ำทุก 5 นาที จนสงบ</li><li>Monitor vital signs อย่างต่อเนื่อง</li><li>รักษาใน ICU หรือหอผู้ป่วยวิกฤต</li><li>Thiamine 100 mg IV ทันที</li><li>ค้นหาและรักษาสาเหตุกระตุ้น (infection, trauma)</li></ol>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="bg-[#8b5cf6] rounded-lg overflow-hidden shadow-sm border border-[#8b5cf6] h-full flex flex-col">
+                                        <div class="text-white font-bold text-center py-2 text-lg">การรักษา</div>
+                                        <div class="bg-[#f5f3ff] p-3 space-y-3 flex-1 flex flex-col justify-between">
+                                            <div class="border-2 border-[#3b82f6] rounded-lg overflow-hidden"><div class="bg-[#3b82f6] text-white text-center text-[14px] font-bold py-1.5">Diazepam (ยาหลัก)</div><div class="p-3 text-[13px] text-gray-800 bg-white font-medium leading-relaxed"><span class="text-[#1d4ed8]">Mild-Mod:</span> 5-10 mg oral ทุก 6-8 ชม.<br><span class="text-[#b91c1c]">Severe:</span> 10 mg IV ช้าๆ ซ้ำทุก 5-15 นาที</div></div>
+                                            <div class="border-2 border-[#14b8a6] rounded-lg overflow-hidden"><div class="bg-[#14b8a6] text-white text-center text-[14px] font-bold py-1.5">Lorazepam (ใช้เมื่อตับเสียหาย)</div><div class="p-3 text-[13px] text-gray-800 bg-[#ccfbf1] font-medium leading-relaxed">1-2 mg oral/IV ทุก 4-6 ชม.<br><span class="text-[#0f766e] text-[11px]">(ไม่ต้องผ่าน hepatic metabolism)</span></div></div>
+                                            <div class="border-2 border-[#f97316] rounded-lg overflow-hidden"><div class="bg-[#f97316] text-white text-center text-[14px] font-bold py-1.5">Thiamine B1 (สำคัญมาก!)</div><div class="p-3 text-[13px] text-gray-800 bg-[#ffedd5] font-bold text-center leading-relaxed">100 mg IV/IM ก่อนให้กลูโคสทุกครั้ง<br><span class="text-[#c2410c] font-normal">ป้องกัน Wernicke's Encephalopathy</span></div></div>
+                                            <div class="border-2 border-[#f87171] rounded-lg bg-white p-3 text-[12px] text-[#b91c1c] font-bold flex gap-3 items-center shadow-sm"><span class="text-2xl leading-none">⚠️</span><div class="leading-tight"><span class="underline">ข้อควรระวัง:</span> ติดตาม RR, BP, ระดับ consciousness อย่างใกล้ชิด มี Flumazenil พร้อม</div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CPG PI PAGE -->
+                <div id="page-cpg-pi" class="hidden animate-fade-in pb-10 cpg-solid-container mt-0">
+                    <div class="flex justify-between items-center mb-6">
+                        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2"><span class="icon-3d text-3xl">🩹</span> CPG of Pressure Injury</h1>
+                        <button onclick="window.printCpgGeneric('cpg-pi-content-container', 'CPG_Pressure_Injury.pdf')" class="btn-primary text-sm shadow-md bg-teal-600 hover:bg-teal-700 flex items-center gap-2"><span class="icon-3d">🖨️</span> บันทึกภาพ (PDF)</button>
+                    </div>
+                    <div id="cpg-pi-content-container">
+                        <div class="bg-teal-800 text-white p-5 text-center rounded-t-xl shadow-md border-b-4 border-teal-400">
+                            <h2 class="text-2xl font-bold tracking-wide mb-1">แนวทางปฏิบัติการป้องกันและดูแลแผลกดทับ</h2>
+                            <p class="text-teal-200 text-sm">Clinical Practice Guideline for Pressure Injury Prevention and Management (NPIAP 2019)</p>
+                        </div>
+                        <div class="bg-white p-4 md:p-6 border-x border-b border-gray-300 rounded-b-xl shadow-md mb-8">
+                            <div class="mb-8">
+                                <h3 class="text-xl font-bold text-teal-800 border-b-2 border-teal-200 pb-2 mb-4 flex items-center gap-2"><span class="icon-3d">🛡️</span> หลักการป้องกันแผลกดทับ (SSKIN Care Bundle)</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                    <div class="bg-teal-50 border border-teal-200 p-3 rounded-lg shadow-sm text-center"><div class="text-2xl font-black text-teal-600 mb-1">S</div><div class="font-bold text-sm text-teal-900 mb-1">Surface</div><div class="text-xs text-gray-700">ใช้อุปกรณ์ลดแรงกดทับ เช่น ที่นอนลม, เบาะเจล</div></div>
+                                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg shadow-sm text-center"><div class="text-2xl font-black text-blue-600 mb-1">S</div><div class="font-bold text-sm text-blue-900 mb-1">Skin Inspection</div><div class="text-xs text-gray-700">ประเมินผิวหนังอย่างน้อยวันละ 1 ครั้ง โดยเฉพาะปุ่มกระดูก</div></div>
+                                    <div class="bg-purple-50 border border-purple-200 p-3 rounded-lg shadow-sm text-center"><div class="text-2xl font-black text-purple-600 mb-1">K</div><div class="font-bold text-sm text-purple-900 mb-1">Keep Moving</div><div class="text-xs text-gray-700">พลิกตะแคงตัวทุก 2 ชั่วโมง จัดท่า 30 องศา</div></div>
+                                    <div class="bg-pink-50 border border-pink-200 p-3 rounded-lg shadow-sm text-center"><div class="text-2xl font-black text-pink-600 mb-1">I</div><div class="font-bold text-sm text-pink-900 mb-1">Incontinence</div><div class="text-xs text-gray-700">ดูแลความสะอาดผิวหนัง ซับให้แห้ง ทา Barrier cream</div></div>
+                                    <div class="bg-orange-50 border border-orange-200 p-3 rounded-lg shadow-sm text-center"><div class="text-2xl font-black text-orange-600 mb-1">N</div><div class="font-bold text-sm text-orange-900 mb-1">Nutrition</div><div class="text-xs text-gray-700">ประเมินโภชนาการ ให้โปรตีนและน้ำอย่างเพียงพอ</div></div>
+                                </div>
+                            </div>
+                            <!-- Staging Section -->
+                            <div class="mb-8">
+                                <h3 class="text-xl font-bold text-teal-800 border-b-2 border-teal-200 pb-2 mb-4 flex items-center gap-2">
+                                    <span class="icon-3d">🔍</span> การจำแนกระดับแผลกดทับ & การเลือกวัสดุปิดแผล (Staging & Dressing)
+                                </h3>
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                    
+                                    <!-- Stage 1 -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <defs>
+                                                    <radialGradient id="s1" cx="50%" cy="50%" r="50%">
+                                                        <stop offset="0%" stop-color="#ef4444" stop-opacity="0.8"/>
+                                                        <stop offset="60%" stop-color="#fca5a5" stop-opacity="0.5"/>
+                                                        <stop offset="100%" stop-color="#fcdbb6" stop-opacity="0"/>
+                                                    </radialGradient>
+                                                </defs>
+                                                <circle cx="100" cy="75" r="45" fill="url(#s1)"/>
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#991b1b" font-weight="bold">รอยแดงกดไม่จาง</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-red-700">Stage 1</h4>
+                                                    <span class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded font-bold">Non-blanchable Erythema</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">ผิวหนังมีรอยแดงที่กดแล้วไม่จางลง (Non-blanchable) ผิวหนังยังไม่ฉีกขาด อาจมีอาการปวด อุ่น แข็ง หรือนิ่มกว่าปกติ</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> Transparent film, Barrier cream, Hydrocolloid แผ่นบาง
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Stage 2 -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <path d="M60,75 C60,55 140,45 145,75 C150,105 70,105 60,75" fill="#fca5a5" stroke="#ef4444" stroke-width="2"/>
+                                                <path d="M75,75 C75,65 125,60 130,75 C135,90 85,90 75,75" fill="#ef4444"/>
+                                                <circle cx="105" cy="72" r="15" fill="#dc2626" opacity="0.6"/>
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#991b1b" font-weight="bold">แผลตื้นสีชมพูแดง</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-red-700">Stage 2</h4>
+                                                    <span class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded font-bold">Partial-Thickness</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">ผิวหนังสูญเสียบางส่วน (ชั้น Epidermis/Dermis) ลักษณะเป็นตุ่มน้ำใส (Blister) หรือแผลตื้นสีชมพูแดง ไม่มี Slough</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> Hydrocolloid, Thin Foam, Non-adherent dressing
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Stage 3 -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <path d="M50,75 C50,45 150,35 155,75 C160,115 60,115 50,75" fill="#fef08a" stroke="#b91c1c" stroke-width="3"/>
+                                                <path d="M70,75 C70,60 130,55 135,75 C140,95 80,95 70,75" fill="#dc2626"/>
+                                                <circle cx="100" cy="70" r="18" fill="#fde047" opacity="0.8"/>
+                                                <circle cx="120" cy="85" r="12" fill="#fde047" opacity="0.9"/>
+                                                <path d="M60,75 Q80,90 90,60" stroke="#991b1b" stroke-width="4" fill="none" opacity="0.5"/>
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#991b1b" font-weight="bold">เห็นชั้นไขมันสีเหลือง</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-red-700">Stage 3</h4>
+                                                    <span class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded font-bold">Full-Thickness Skin Loss</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">สูญเสียผิวหนังทั้งหมด มองเห็นชั้นไขมัน (Subcutaneous fat) อาจมีเนื้อตาย (Slough/Eschar) หรือแผลเป็นโพรงซอกหลืบ แต่ยังไม่เห็นกล้ามเนื้อ/กระดูก</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> Calcium Alginate/Hydrofiber (ถ้าสารคัดหลั่งมาก), Hydrogel (ถ้าแผลแห้ง) ปิดทับด้วย Foam
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Stage 4 -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <path d="M40,75 C40,35 160,25 165,75 C170,125 50,125 40,75" fill="#7f1d1d" stroke="#450a0a" stroke-width="3"/>
+                                                <path d="M60,75 C60,50 140,45 145,75 C150,105 70,105 60,75" fill="#991b1b"/>
+                                                <path d="M90,65 C95,60 115,60 120,70 C115,80 95,80 90,65" fill="#f8fafc"/> <!-- Bone -->
+                                                <path d="M80,85 C85,80 100,85 105,95 C100,100 85,95 80,85" fill="#f8fafc"/> <!-- Bone -->
+                                                <circle cx="130" cy="80" r="15" fill="#fef08a" opacity="0.8"/> <!-- Slough -->
+                                                <circle cx="70" cy="60" r="10" fill="#44403c"/> <!-- Eschar -->
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#450a0a" font-weight="bold">เห็นกล้ามเนื้อ/กระดูก</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-red-700">Stage 4</h4>
+                                                    <span class="bg-red-100 text-red-800 text-[10px] px-2 py-1 rounded font-bold">Full-Thickness Tissue Loss</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">สูญเสียเนื้อเยื่อทั้งหมด มองเห็นกล้ามเนื้อ เอ็น หรือกระดูกอย่างชัดเจน มี Slough/Eschar และมักเป็นโพรงซอกหลืบ</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> Packing ด้วย Alginate/Hydrofiber, Antimicrobial dressing ทับด้วย Foam
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Unstageable -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <path d="M55,75 C55,45 145,35 150,75 C155,115 65,115 55,75" fill="#fef08a" stroke="#78716c" stroke-width="2"/> <!-- Slough Base -->
+                                                <path d="M65,75 C65,55 135,45 140,75 C145,105 75,105 65,75" fill="#292524"/> <!-- Eschar Core -->
+                                                <circle cx="100" cy="70" r="25" fill="#44403c"/>
+                                                <circle cx="80" cy="90" r="15" fill="#1c1917"/>
+                                                <path d="M110,80 C110,60 130,60 130,80 C130,100 110,100 110,80" fill="#fde047" opacity="0.9"/> <!-- Slough Patch -->
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#292524" font-weight="bold">ปกคลุมด้วยเนื้อตายดำ/เหลือง</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-gray-800">Unstageable</h4>
+                                                    <span class="bg-gray-200 text-gray-800 text-[10px] px-2 py-1 rounded font-bold">Obscured Tissue Loss</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">แผลถูกปกคลุมด้วยเนื้อตายสีเหลือง/เขียว/น้ำตาล (Slough) หรือสีดำ/น้ำตาลแข็ง (Eschar) จนไม่สามารถประเมินความลึกของฐานแผลได้</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> Hydrogel เพื่อละลายเนื้อตาย (Autolytic debridement) ร่วมกับการตัดแต่งเนื้อตาย
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Deep Tissue Injury (DTI) -->
+                                    <div class="flex flex-col md:flex-row bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition">
+                                        <div class="md:w-1/3 bg-[#fcdbb6] relative min-h-[140px] flex items-center justify-center border-r border-gray-100">
+                                            <svg viewBox="0 0 200 150" class="w-full h-full object-cover absolute inset-0">
+                                                <rect width="200" height="150" fill="#fcdbb6"/>
+                                                <defs>
+                                                    <radialGradient id="dti" cx="50%" cy="50%" r="50%">
+                                                        <stop offset="0%" stop-color="#4c1d95" stop-opacity="0.9"/>
+                                                        <stop offset="40%" stop-color="#7e22ce" stop-opacity="0.7"/>
+                                                        <stop offset="80%" stop-color="#9d174d" stop-opacity="0.4"/>
+                                                        <stop offset="100%" stop-color="#fcdbb6" stop-opacity="0"/>
+                                                    </radialGradient>
+                                                </defs>
+                                                <ellipse cx="100" cy="75" rx="55" ry="40" fill="url(#dti)"/>
+                                                <path d="M80,60 Q100,40 120,65" fill="none" stroke="#fcdbb6" stroke-width="2" opacity="0.5"/> <!-- Hint of intact skin reflection -->
+                                                <text x="10" y="20" font-family="sans-serif" font-size="12" fill="#4c1d95" font-weight="bold">ผิวหนังไม่เปิด สีม่วงช้ำลึก</text>
+                                            </svg>
+                                        </div>
+                                        <div class="md:w-2/3 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div class="flex justify-between items-start mb-2">
+                                                    <h4 class="font-bold text-lg text-purple-800">Deep Tissue Injury (DTI)</h4>
+                                                    <span class="bg-purple-100 text-purple-800 text-[10px] px-2 py-1 rounded font-bold">Persistent Deep Red/Purple</span>
+                                                </div>
+                                                <p class="text-sm text-gray-700 mb-2">ผิวหนังสีม่วงแดงหรือแดงคล้ำ คล้ายรอยช้ำตื้นๆ กดไม่จาง เกิดจากการบาดเจ็บของเนื้อเยื่อใต้ผิวหนังอย่างรุนแรง ผิวหนังอาจยังไม่ฉีกขาด</p>
+                                            </div>
+                                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-sm">
+                                                <span class="font-bold text-teal-700">🩹 Dressing:</span> ใช้ Film หรือ Foam ป้องกันการเสียดสี ไม่นวดหรือคลึงบริเวณนั้น ลดแรงกดทับ
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded text-sm text-blue-900 mb-4 shadow-sm">
+                                <strong class="font-bold block mb-1">💡 ข้อแนะนำเพิ่มเติมในการทำแผล:</strong>
+                                <ul class="list-disc pl-5 space-y-1 text-gray-700">
+                                    <li>ใช้น้ำเกลือล้างแผล (0.9% NSS) ในการทำความสะอาดแผล หลีกเลี่ยงการใช้น้ำยาฆ่าเชื้อที่มีฤทธิ์ระคายเคืองต่อเนื้อเยื่อสร้างใหม่ ยกเว้นแผลติดเชื้อรุนแรง</li>
+                                    <li>ปกป้องขอบแผล (Peri-wound) ด้วย Barrier cream หรือฟิล์มเคลือบผิวหนัง เพื่อป้องกันการเปื่อยยุ่ยจากสารคัดหลั่ง</li>
+                                    <li>เลือกวัสดุปิดแผลที่รักษาความชุ่มชื้น (Moist wound healing) และจัดการ Exudate ได้เหมาะสม</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- References Section -->
+                        <div class="bg-white rounded-xl overflow-hidden shadow-md border border-gray-200">
+                            <div class="bg-slate-800 text-white p-3 md:p-4 text-center">
+                                <h2 class="text-xl md:text-2xl font-bold mb-1 tracking-wide">เอกสารอ้างอิง (References)</h2>
+                                <p class="text-xs md:text-sm text-slate-300 font-medium">APA 7th Edition Format</p>
+                            </div>
+                            
+                            <div class="p-5 md:p-8 bg-slate-50">
+                                <ul class="space-y-4 text-[13px] text-gray-700 leading-relaxed list-none pl-4" style="text-indent: -1.5rem;">
+                                    <li>European Pressure Ulcer Advisory Panel, National Pressure Injury Advisory Panel, & Pan Pacific Pressure Injury Alliance. (2019). <em>Prevention and treatment of pressure ulcers/injuries: Clinical practice guideline</em>. (E. Haesler, Ed.). EPUAP/NPIAP/PPPIA.</li>
+                                    <li>Kottner, J., Cuddigan, J., Carville, K., Balzer, K., Berlowitz, D., Law, S., Litchford, M., Mitchell, P., Moore, Z., Pittman, J., Sigaudo-Roussel, D., Yee, C. Y., & Haesler, E. (2019). Prevention and treatment of pressure ulcers/injuries: Quick reference guide. <em>Journal of Tissue Viability, 28</em>(4), 163-164. https://doi.org/10.1016/j.jtv.2019.09.001</li>
+                                    <li>National Pressure Injury Advisory Panel. (2016). <em>NPIAP pressure injury stages</em>. https://npiap.com/page/PressureInjuryStages</li>
+                                    <li>สมาคมพยาบาลต้านออสโตมีและแผล (ประเทศไทย). (2563). <em>แนวทางเวชปฏิบัติการป้องกันและดูแลแผลกดทับ (Clinical practice guideline for pressure injury prevention and management)</em>. สมาคมพยาบาลต้านออสโตมีและแผล.</li>
+                                    <li>สถาบันรับรองคุณภาพสถานพยาบาล (องค์การมหาชน). (2565). <em>มาตรฐานโรงพยาบาลและบริการสุขภาพ ฉบับที่ 5</em>. สถาบันรับรองคุณภาพสถานพยาบาล.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ASSESSMENT PAGES -->
+                <div id="page-assessment" class="hidden animate-fade-in">
+                    <div class="flex justify-between items-center mb-2">
+                        <button onclick="window.showDashboard(window.currentDashboardView || 'all')" class="text-slate-600 hover:text-blue-600 flex items-center gap-1 font-bold transition-colors drop-shadow-sm">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg> กลับหน้าหลัก
+                        </button>
+                        <button onclick="window.goToNextPatient()" class="btn-secondary text-sm shadow-md flex items-center gap-1">
+                            <span>รายถัดไป</span> ⏭️
+                        </button>
+                    </div>
+                    <div id="patient-nav-bar"></div>
+                    <div id="assessment-content" class="mt-2"></div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK & Logic -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -851,39 +1527,67 @@
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                             <div class="lg:col-span-2">
                                 <form id="dhf-form" class="space-y-5 mb-6">
+                                    <!-- Section 1: V/S -->
                                     <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
                                         <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">📈</span> 1. สัญญาณชีพ (Vital Signs)</h4>
                                         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
                                             <div><label class="text-xs font-bold text-slate-600 block mb-1">T (°C)</label><input type="number" step="0.1" name="vs_t" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">HR (bpm)</label><input type="number" name="vs_hr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" oninput="window.autoCalcDHF()"></div>
+                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">HR (bpm)</label><input type="number" name="vs_hr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
                                             <div><label class="text-xs font-bold text-slate-600 block mb-1">RR (/min)</label><input type="number" name="vs_rr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">BP (mmHg)</label><input type="text" name="vs_bp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="110/70" oninput="window.autoCalcDHF()"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">PP (SBP-DBP)</label><input type="number" name="vs_pp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="<=20" oninput="window.autoCalcDHF()"></div>
+                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">BP (mmHg)</label><input type="text" name="vs_bp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="110/70"></div>
+                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">PP (SBP-DBP)</label><input type="number" name="vs_pp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="<=20"></div>
                                         </div>
                                     </div>
+
+                                    <!-- Section 2: Checklists -->
                                     <div class="bg-red-50/60 backdrop-blur-sm p-5 rounded-2xl border border-red-200/60 shadow-inner">
                                         <h4 class="font-extrabold text-red-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🚨</span> 2. สัญญาณเตือนอันตราย (Red Flags)</h4>
                                         <p class="text-xs text-red-600 font-bold mb-4 bg-white/60 inline-block px-2 py-1 rounded">ติ๊กเลือกอาการที่ตรวจพบ (1 ข้อ = 1 คะแนนความเสี่ยง)</p>
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_temp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">อุณหภูมิลดลงอย่างรวดเร็วร่วมกับเหงื่อออก/ตัวเย็น</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_hr" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">HR เร็วและเบา (Tachycardia)</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_pp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">Pulse Pressure แคบลง (≤ 20 mmHg)</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_bp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">ความดันโลหิตตก (Hypotension)</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_crt" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">CRT > 2 วินาที / ปลายมือปลายเท้าเย็นลาย</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_urine" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">Urine Output < 0.5 cc/kg/hr หรือไม่มีปัสสาวะ</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_bleed" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">มีเลือดออกรุนแรง (อาเจียนเป็นเลือด, ถ่ายดำ)</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100"><input type="checkbox" name="rf_neuro" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">ซึมลง, สับสน, กระสับกระส่าย, ชัก</span></label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100 md:col-span-2"><input type="checkbox" name="rf_fluid" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check"><span class="text-sm font-bold text-slate-700">หายใจหอบเหนื่อย / SpO2 ลด / ท้องโต / ตับโตและกดเจ็บมาก (อาการน้ำเกิน/รั่ว)</span></label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_temp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">อุณหภูมิลดลงอย่างรวดเร็วร่วมกับเหงื่อออก/ตัวเย็น</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_hr" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">HR เร็วและเบา (Tachycardia)</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_pp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">Pulse Pressure แคบลง (≤ 20 mmHg)</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_bp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">ความดันโลหิตตก (Hypotension)</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_crt" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">CRT > 2 วินาที / ปลายมือปลายเท้าเย็นลาย</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_urine" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">Urine Output < 0.5 cc/kg/hr หรือไม่มีปัสสาวะ</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_bleed" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">มีเลือดออกรุนแรง (อาเจียนเป็นเลือด, ถ่ายดำ)</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                                <input type="checkbox" name="rf_neuro" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">ซึมลง, สับสน, กระสับกระส่าย, ชัก</span>
+                                            </label>
+                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100 md:col-span-2">
+                                                <input type="checkbox" name="rf_fluid" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                                <span class="text-sm font-bold text-slate-700">หายใจหอบเหนื่อย / SpO2 ลด / ท้องโต / ตับโตและกดเจ็บมาก (อาการน้ำเกิน/รั่ว)</span>
+                                            </label>
                                         </div>
                                     </div>
+
+                                    <!-- Section 3: Labs -->
                                     <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
                                         <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🧪</span> 3. ผลทางห้องปฏิบัติการ (Lab Monitoring)</h4>
                                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <div>
-                                                <label class="text-xs font-bold text-slate-600 block mb-1">Hct (%)</label>
-                                                <input type="number" step="0.1" name="lab_hct" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80" oninput="window.checkHctChange()">
-                                                <div id="hct-warning" class="hidden"></div>
-                                            </div>
+                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">Hct (%)</label><input type="number" step="0.1" name="lab_hct" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
                                             <div><label class="text-xs font-bold text-slate-600 block mb-1">Platelet (cell/mm³)</label><input type="number" name="lab_plt" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
                                             <div><label class="text-xs font-bold text-slate-600 block mb-1">Blood Sugar (mg/dL)</label><input type="number" name="lab_dtx" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
                                             <div><label class="text-xs font-bold text-slate-600 block mb-1">อื่นๆ (LFT, Coag, Elyte)</label><input type="text" name="lab_other" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80" placeholder="ระบุค่า"></div>
@@ -1431,7 +2135,7 @@
         }
 
         // --- PDF Print Generators ---
-       window.printPatientSummary = async (type, pid) => {
+        window.printPatientSummary = async (type, pid) => {
             if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
             showToast('กำลังประมวลผล PDF สรุป...', 'info');
             try {
@@ -1444,7 +2148,9 @@
                 if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
 
                 const container = document.createElement('div');
-                container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
+                // FIX: Use fixed positioning behind the current view to ensure html2canvas captures it accurately
+                container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
+                
                 const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
                 const sources = {
                     aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
@@ -1471,12 +2177,30 @@
                 container.innerHTML = html + '</table>';
                 document.body.appendChild(container);
                 
-                const canvas = await html2canvas(container, {scale: 2, useCORS: true});
-                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                // FIX: Wait for DOM to render completely
+                await new Promise(r => setTimeout(r, 300));
+                
+                const canvas = await html2canvas(container, {
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#ffffff',
+                    windowWidth: 800,
+                    windowHeight: container.scrollHeight
+                });
+                
+                document.body.removeChild(container);
+
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                    return showToast('ไม่สามารถสร้างภาพเอกสารได้', 'error');
+                }
+
+                const pdfWidth = 210; 
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
                 pdf.save(`Summary_${type}_HN${patient.hn}.pdf`);
-                document.body.removeChild(container);
                 showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
             } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
         };
@@ -1494,7 +2218,8 @@
                 if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
 
                 const container = document.createElement('div');
-                container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
+                // FIX: Use fixed positioning
+                container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
                 const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
                 const sources = {
                     aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
@@ -1534,7 +2259,7 @@
                             let l2 = labels[k2] || k2;
                             let num1 = parseInt(l1.match(/^\d+/)) || 999;
                             let num2 = parseInt(l2.match(/^\d+/)) || 999;
-                            if (num1 !== num2) return num1 - num2;
+                            if (numฉันได้รับการออกแบบมาเพื่อประมวลผลและเขียนข้อความเท่านั้น จึงช่วยคุณในเรื่องนี้ไม่ได้ 1 !== num2) return num1 - num2;
                             return l1.localeCompare(l2);
                         });
 
@@ -1555,15 +2280,35 @@
                 
                 container.innerHTML = html;
                 document.body.appendChild(container);
+
+                // FIX: ป้องกันปัญหาการสร้าง PDF ล้มเหลว (ERR_FAILED / ไฟล์เสีย) โดยรอให้ DOM โหลดเสร็จก่อนจับภาพ
+                await new Promise(r => setTimeout(r, 300));
                 
-                const canvas = await html2canvas(container, {scale: 2, useCORS: true});
-                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const pdf = new window.jspdf.jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight+20)]);
+                const canvas = await html2canvas(container, {
+                    scale: 2, 
+                    useCORS: true,
+                    backgroundColor: '#ffffff',
+                    windowWidth: 800,
+                    windowHeight: container.scrollHeight
+                });
+                
+                document.body.removeChild(container);
+
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                    return showToast('ไม่สามารถสร้างภาพเอกสารได้', 'error');
+                }
+
+                const pdfWidth = 210; 
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const { jsPDF } = window.jspdf;
+                
+                // ปรับขนาดหน้ากระดาษให้พอดีกับเนื้อหา
+                const pdf = new jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 20)]);
+                
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
                 pdf.save(`Detailed_${type}_HN${patient.hn}.pdf`);
-                document.body.removeChild(container);
                 showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
-            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลด PDF', 'error'); }
         };
         
         const printCpgGeneric = async (id, filename) => {
@@ -1571,13 +2316,17 @@
             const el = document.getElementById(id);
             showToast('กำลังสร้าง PDF คู่มือ...', 'info');
             try {
+                // รอให้ Layout เข้าที่
+                await new Promise(r => setTimeout(r, 100));
+
                 const canvas = await html2canvas(el, {scale: 2, useCORS: true, backgroundColor: '#ffffff'});
                 const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const pdf = new window.jspdf.jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 10)]);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 10)]);
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 5, pdfWidth, imgHeight);
                 pdf.save(filename);
                 showToast('ดาวน์โหลด PDF คู่มือสำเร็จ', 'success');
-            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลดคู่มือ', 'error'); }
         };
 
         window.printCpgPdf = () => printCpgGeneric('cpg-content-container', 'CPG_AWS.pdf');

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>IPD3 Score Board - Critical Care</title>
+    <title>IPD3 Score Board - DHF Critical Care</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -40,6 +40,7 @@
         /* Inputs for Glassmorphism */
         .form-input, .form-select, .form-textarea { width: 100%; padding: 0.6rem 0.85rem; border-radius: 0.75rem; border: 1px solid rgba(255,255,255,0.9); background-color: rgba(255, 255, 255, 0.7); backdrop-filter: blur(4px); font-size: 0.95rem; transition: all 0.2s; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.02); }
         .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #3b82f6; background-color: rgba(255,255,255,0.95); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        .dhf-check { width: 1.25rem; height: 1.25rem; accent-color: #dc2626; cursor: pointer; }
         
         /* Buttons */
         .btn-primary { background: linear-gradient(to right, #2563eb, #3b82f6); color: white; padding: 0.6rem 1.2rem; border-radius: 0.75rem; font-weight: 600; transition: all 0.3s; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3); border: 1px solid rgba(255,255,255,0.2); }
@@ -1755,4 +1756,255 @@
             }
 
             try {
-                const colRefฉันให้ความช่วยเหลือคุณในเรื่องนี้ไม่ได้เนื่องจากเป็นเพียงโมเดลภาษา และไม่มีข้อมูลหรือความสามารถที่ใช้ตอบคำถามนี้
+                const colRef = db.collection(`artifacts/${appId}/public/data/patients/${currentPatientData.id}/${type}_assessments`);
+                if(isEdit) await colRef.doc(editId).set(data, { merge:true });
+                else await colRef.add(data);
+                
+                await db.doc(`artifacts/${appId}/public/data/patients/${currentPatientData.id}`).update(summaryUpdate);
+                showToast(isEdit ? 'อัปเดตข้อมูลย้อนหลังสำเร็จ' : 'บันทึกผลการประเมินสำเร็จ', 'success');
+                
+                if(isEdit) {
+                    const saveBtn = document.getElementById('btn-save-asmnt');
+                    saveBtn.innerHTML = '<span class="icon-3d text-xl drop-shadow">💾</span> <span class="drop-shadow">บันทึกผลประเมิน</span>';
+                    saveBtn.classList.remove('btn-warning'); saveBtn.classList.add('btn-primary');
+                    saveBtn.onclick = () => window.saveAssessment(type);
+                }
+            } catch(e) { console.error(e); showToast('บันทึกผิดพลาด', 'error'); }
+        };
+
+        function loadHistoryTable(type) {
+            if (!auth.currentUser) return;
+            
+            db.collection(`artifacts/${appId}/public/data/patients/${currentPatientData.id}/${type}_assessments`).onSnapshot((snap) => {
+                const tbody = document.getElementById('history-body');
+                if(!tbody) return;
+                tbody.innerHTML = '';
+                if(snap.empty) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-500 bg-white/40 backdrop-blur-sm text-sm font-bold">ยังไม่มีประวัติการประเมิน</td></tr>`;
+                    return;
+                }
+                
+                let docsData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                docsData.sort((a, b) => new Date(b.assessmentAt).getTime() - new Date(a.assessmentAt).getTime());
+
+                docsData.forEach(v => {
+                    let color = 'text-slate-800';
+                    let bgBadge = 'bg-slate-100/80 border border-slate-200/50 backdrop-blur-sm';
+                    if (type === 'dhf') { color = v.score >= 3 ? 'text-red-800' : (v.score >= 1 ? 'text-orange-800' : 'text-emerald-800'); bgBadge = v.score >= 3 ? 'bg-red-100/90 border-red-200/60 backdrop-blur-sm' : (v.score >= 1 ? 'bg-orange-100/90 border-orange-200/60 backdrop-blur-sm' : 'bg-emerald-100/90 border-emerald-200/60 backdrop-blur-sm');}
+                    if (type === 'aws') { color = v.score >= 10 ? 'text-red-800' : (v.score >= 5 ? 'text-orange-800' : 'text-emerald-800'); bgBadge = v.score >= 10 ? 'bg-red-100/90 border-red-200/60 backdrop-blur-sm' : (v.score >= 5 ? 'bg-orange-100/90 border-orange-200/60 backdrop-blur-sm' : 'bg-emerald-100/90 border-emerald-200/60 backdrop-blur-sm');}
+                    if (type === 'braden') { color = v.score <= 12 ? 'text-red-800' : (v.score <= 14 ? 'text-orange-800' : 'text-emerald-800'); bgBadge = v.score <= 12 ? 'bg-red-100/90 border-red-200/60 backdrop-blur-sm' : (v.score <= 14 ? 'bg-orange-100/90 border-orange-200/60 backdrop-blur-sm' : 'bg-emerald-100/90 border-emerald-200/60 backdrop-blur-sm');}
+
+                    let resStr = `<div class="font-black ${color}">${(v.level || v.risk)}</div>`;
+                    if (type === 'aws' && v.medication) {
+                        resStr += `<div class="mt-1.5"><span class="text-[11px] text-blue-800 bg-blue-100/90 px-2.5 py-0.5 rounded-lg border border-blue-300/50 shadow-sm font-extrabold flex items-center gap-1.5 w-max backdrop-blur-sm"><span class="text-[14px] leading-none drop-shadow-sm">💊</span> ${v.medication}</span></div>`;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'border-b border-white/30 hover:bg-white/60 transition-colors';
+                    tr.innerHTML = `
+                        <td class="p-4">
+                            <div class="font-extrabold text-slate-800 drop-shadow-sm">${new Date(v.assessmentAt).toLocaleDateString('th-TH', {day:'numeric',month:'short', year:'2-digit'})}</div>
+                            <div class="text-xs text-slate-600 font-bold mt-0.5 drop-shadow-sm">เวร${v.shift} (${new Date(v.assessmentAt).toTimeString().substring(0,5)})</div>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="inline-block px-3 py-1 rounded-full font-black shadow-sm ${bgBadge} ${color}">${v.score}</span>
+                        </td>
+                        <td class="p-4 drop-shadow-sm">${resStr}</td>
+                        <td class="p-4 text-sm text-slate-700 font-bold flex items-center gap-1.5 drop-shadow-sm"><span class="icon-3d text-xs">🧑‍⚕️</span> ${v.assessor}</td>
+                        <td class="p-4 text-right">
+                            <button class="text-amber-700 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/50 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" onclick="window.editAssessmentHistory('${type}', '${v.id}')">แก้ไข</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // --- PDF Print Generators ---
+       window.printPatientSummary = async (type, pid) => {
+            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
+            showToast('กำลังประมวลผล PDF สรุป...', 'info');
+            try {
+                const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
+                if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
+                const patient = pSnap.data();
+
+                const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
+                const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
+                if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
+
+                const container = document.createElement('div');
+                container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
+                const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+                const sources = {
+                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+                    dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
+                };
+                
+                let html = `
+                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
+                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">สรุปประวัติ ${titles[type]}</h2>
+                </div>
+                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
+                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+                </div>
+                <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
+                    <tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:10px;">วันที่ / เวลา</th><th style="border:1px solid #cbd5e1; padding:10px;">คะแนน</th><th style="border:1px solid #cbd5e1; padding:10px; text-align:left;">ผลลัพธ์</th><th style="border:1px solid #cbd5e1; padding:10px;">ผู้ประเมิน</th></tr>`;
+                
+                assessments.forEach(a => {
+                    let res = a.level || a.risk;
+                    html += `<tr><td style="border:1px solid #cbd5e1; padding:10px;">${new Date(a.assessmentAt).toLocaleString('th-TH')}</td><td style="border:1px solid #cbd5e1; padding:10px; font-weight:bold;">${a.score}</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:left;">${res}</td><td style="border:1px solid #cbd5e1; padding:10px;">${a.assessor}</td></tr>`;
+                });
+                
+                container.innerHTML = html + '</table>';
+                document.body.appendChild(container);
+                
+                const canvas = await html2canvas(container, {scale: 2, useCORS: true});
+                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdf = new window.jspdf.jsPDF('p', 'mm', 'a4');
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
+                pdf.save(`Summary_${type}_HN${patient.hn}.pdf`);
+                document.body.removeChild(container);
+                showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+        };
+        
+        window.printDetailedPdf = async (type, pid) => {
+            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
+            showToast('กำลังเตรียมประวัติละเอียด...', 'info');
+            try {
+                const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
+                if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
+                const patient = pSnap.data();
+
+                const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
+                const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
+                if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
+
+                const container = document.createElement('div');
+                container.style.cssText = "position:absolute; top:-9999px; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a;";
+                const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+                const sources = {
+                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+                    dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
+                };
+                
+                let html = `
+                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
+                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">ประวัติละเอียด ${titles[type]}</h2>
+                </div>
+                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
+                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+                </div>`;
+                
+                let dict = {}; let labels = {};
+                if(type === 'dhf') { dict = assessmentDicts.dhf; labels = fieldLabels.dhf; }
+                else if(type === 'aws') { dict = assessmentDicts.aws; labels = fieldLabels.aws; }
+                else if(type === 'braden') { dict = assessmentDicts.braden; labels = fieldLabels.braden; }
+
+                assessments.forEach(a => {
+                    let res = a.level || a.risk;
+                    html += `<div style="border:1px solid #cbd5e1; border-radius:8px; margin-bottom:15px;">
+                        <div style="background:#e2e8f0; padding:10px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; font-weight:bold;">
+                            <span>${new Date(a.assessmentAt).toLocaleString('th-TH')} (เวร${a.shift||'-'})</span>
+                            <span style="color:#1d4ed8;">คะแนน: ${a.score} | ผลลัพธ์: ${res}</span>
+                        </div>
+                        <div style="padding:15px; font-size:13px;">
+                            <div style="margin-bottom:8px;"><strong>ผู้ประเมิน:</strong> ${a.assessor}</div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
+                    
+                    if(a.details) {
+                        let detailsKeys = Object.keys(a.details);
+                        detailsKeys.sort((k1, k2) => {
+                            let l1 = labels[k1] || k1;
+                            let l2 = labels[k2] || k2;
+                            let num1 = parseInt(l1.match(/^\d+/)) || 999;
+                            let num2 = parseInt(l2.match(/^\d+/)) || 999;
+                            if (num1 !== num2) return num1 - num2;
+                            return l1.localeCompare(l2);
+                        });
+
+                        detailsKeys.forEach(k => {
+                            let labelName = labels[k] || k;
+                            let val = a.details[k];
+                            // แปลงค่า boolean ของ checkbox
+                            if (val === 'true') val = 'ตรวจพบ';
+                            if (val === 'false') val = 'ไม่พบ';
+                            if (dict[k] && dict[k][val]) val = dict[k][val].replace(/\([^)]+\)/g, '').trim(); 
+                            html += `<div><strong>${labelName}:</strong> <span style="color:#475569;">${val}</span></div>`;
+                        });
+                    }
+                    if(type === 'aws') html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px;"><strong>ยาที่ให้:</strong> ${a.medication||'-'} | <strong>V/S:</strong> ${a.vitals||'-'} | <strong>ระดับความรู้สึกตัว:</strong> ${a.consciousness||'-'}</div>`;
+                    if(type === 'braden' && (a.ulcerLoc||a.ulcerStage)) html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px; color:#b91c1c;"><strong>แผลกดทับ:</strong> ตำแหน่ง ${a.ulcerLoc||'-'} | ขนาด ${a.ulcerSize||'-'} | ระดับ ${a.ulcerStage||'-'} | จำนวน ${a.ulcerQty||'-'}</div>`;
+                    html += `</div></div></div>`;
+                });
+                
+                container.innerHTML = html;
+                document.body.appendChild(container);
+                
+                const canvas = await html2canvas(container, {scale: 2, useCORS: true});
+                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdf = new window.jspdf.jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight+20)]);
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
+                pdf.save(`Detailed_${type}_HN${patient.hn}.pdf`);
+                document.body.removeChild(container);
+                showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+        };
+        
+        const printCpgGeneric = async (id, filename) => {
+            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF', 'error');
+            const el = document.getElementById(id);
+            showToast('กำลังสร้าง PDF คู่มือ...', 'info');
+            try {
+                const canvas = await html2canvas(el, {scale: 2, useCORS: true, backgroundColor: '#ffffff'});
+                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdf = new window.jspdf.jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 10)]);
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 5, pdfWidth, imgHeight);
+                pdf.save(filename);
+                showToast('ดาวน์โหลด PDF คู่มือสำเร็จ', 'success');
+            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+        };
+
+        window.printCpgPdf = () => printCpgGeneric('cpg-content-container', 'CPG_AWS.pdf');
+        window.printCpgPiPdf = () => printCpgGeneric('cpg-pi-content-container', 'CPG_Pressure_Injury.pdf');
+
+        // --- Countdown Timer Logic ---
+        setInterval(() => {
+            const now = new Date().getTime();
+            document.querySelectorAll('.countdown-cell').forEach(cell => {
+                const nextAssessmentTime = parseInt(cell.getAttribute('data-next-assessment'));
+                if (!nextAssessmentTime) return;
+
+                const distance = nextAssessmentTime - now;
+
+                if (distance < 0) {
+                    const overdue = Math.abs(distance);
+                    const hours = Math.floor(overdue / (1000 * 60 * 60));
+                    const minutes = Math.floor((overdue % (1000 * 60 * 60)) / (1000 * 60));
+                    cell.innerHTML = `<span class="font-bold text-white bg-red-500/90 backdrop-blur-sm border border-red-400 px-3 py-1.5 rounded-lg shadow-md animate-pulse drop-shadow-sm">⚠️ เลยกำหนด ${hours}ชั่วโมง ${minutes}นาที</span>`;
+                } else {
+                    const hours = Math.floor(distance / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    let colorClass = 'text-green-800 bg-green-100/80 backdrop-blur-sm border border-green-200/60 px-3 py-1.5 rounded-lg font-bold shadow-sm';
+                    if (distance < 30 * 60 * 1000) { 
+                        colorClass = 'text-orange-800 bg-orange-100/90 backdrop-blur-sm border border-orange-300/60 px-3 py-1.5 rounded-lg font-black shadow-md animate-pulse';
+                    }
+
+                    cell.innerHTML = `<span class="${colorClass}">${hours}ชม. ${String(minutes).padStart(2,'0')}น. ${String(seconds).padStart(2,'0')}วิ.</span>`;
+                }
+            });
+        }, 1000);
+
+        // --- Initialize Auth on Load ---
+        initAuth();
+
+    </script>
+</body>
+</html>

@@ -2135,199 +2135,213 @@
         }
 
         // --- PDF Print Generators ---
-        window.printPatientSummary = async (type, pid) => {
-            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
-            showToast('กำลังประมวลผล PDF สรุป...', 'info');
-            try {
-                const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
-                if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
-                const patient = pSnap.data();
+window.printPatientSummary = async (type, pid) => {
+    if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
+    showToast('กำลังประมวลผล PDF สรุป...', 'info');
+    try {
+        const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
+        if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
+        const patient = pSnap.data();
 
-                const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
-                const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
-                if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
+        const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
+        const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
+        if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
 
-                const container = document.createElement('div');
-                // FIX: Use fixed positioning behind the current view to ensure html2canvas captures it accurately
-                container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
-                
-                const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
-                const sources = {
-                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
-                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
-                    dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
-                };
-                
-                let html = `
-                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
-                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">สรุปประวัติ ${titles[type]}</h2>
-                </div>
-                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
-                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
-                </div>
-                <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
-                    <tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:10px;">วันที่ / เวลา</th><th style="border:1px solid #cbd5e1; padding:10px;">คะแนน</th><th style="border:1px solid #cbd5e1; padding:10px; text-align:left;">ผลลัพธ์</th><th style="border:1px solid #cbd5e1; padding:10px;">ผู้ประเมิน</th></tr>`;
-                
-                assessments.forEach(a => {
-                    let res = a.level || a.risk;
-                    html += `<tr><td style="border:1px solid #cbd5e1; padding:10px;">${new Date(a.assessmentAt).toLocaleString('th-TH')}</td><td style="border:1px solid #cbd5e1; padding:10px; font-weight:bold;">${a.score}</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:left;">${res}</td><td style="border:1px solid #cbd5e1; padding:10px;">${a.assessor}</td></tr>`;
-                });
-                
-                container.innerHTML = html + '</table>';
-                document.body.appendChild(container);
-                
-                // FIX: Wait for DOM to render completely
-                await new Promise(r => setTimeout(r, 300));
-                
-                const canvas = await html2canvas(container, {
-                    scale: 2, 
-                    useCORS: true, 
-                    backgroundColor: '#ffffff',
-                    windowWidth: 800,
-                    windowHeight: container.scrollHeight
-                });
-                
-                document.body.removeChild(container);
-
-                if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                    return showToast('ไม่สามารถสร้างภาพเอกสารได้', 'error');
-                }
-
-                const pdfWidth = 210; 
-                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
-                pdf.save(`Summary_${type}_HN${patient.hn}.pdf`);
-                showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
-            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+        const container = document.createElement('div');
+        container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
+        
+        const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+        const sources = {
+            aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+            braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+            dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
         };
+        
+        let html = `
+        <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
+            <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">สรุปประวัติ ${titles[type]}</h2>
+        </div>
+        ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
+        <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+            <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:14px; text-align:center;">
+            <tr style="background:#e2e8f0;"><th style="border:1px solid #cbd5e1; padding:10px;">วันที่ / เวลา</th><th style="border:1px solid #cbd5e1; padding:10px;">คะแนน</th><th style="border:1px solid #cbd5e1; padding:10px; text-align:left;">ผลลัพธ์</th><th style="border:1px solid #cbd5e1; padding:10px;">ผู้ประเมิน</th></tr>`;
+        
+        assessments.forEach(a => {
+            let res = a.level || a.risk;
+            html += `<tr><td style="border:1px solid #cbd5e1; padding:10px;">${new Date(a.assessmentAt).toLocaleString('th-TH')}</td><td style="border:1px solid #cbd5e1; padding:10px; font-weight:bold;">${a.score}</td><td style="border:1px solid #cbd5e1; padding:10px; text-align:left;">${res}</td><td style="border:1px solid #cbd5e1; padding:10px;">${a.assessor}</td></tr>`;
+        });
+        
+        container.innerHTML = html + '</table>';
+        document.body.appendChild(container);
+        
+        await new Promise(r => setTimeout(r, 300));
+        
+        const canvas = await html2canvas(container, {
+            scale: 2, 
+            useCORS: true, 
+            backgroundColor: '#ffffff',
+            windowWidth: 800,
+            windowHeight: container.scrollHeight
+        });
+        
+        document.body.removeChild(container);
+
+        // เปลี่ยนเป็น JPEG เพื่อลดขนาดไฟล์และป้องกัน PDF โครงสร้างพัง
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+        if (!imgData || imgData === 'data:,') {
+            return showToast('ข้อผิดพลาด: ไม่สามารถสร้างภาพจำลองได้', 'error');
+        }
+
+        const pdfWidth = 210; 
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        // ปัดเศษให้เป็นจำนวนเต็มเสมอ ป้องกัน PDF Reader เออเร่อ
+        const pageHeight = Math.ceil(Math.max(297, imgHeight + 20));
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', [pdfWidth, pageHeight]);
+        
+        pdf.addImage(imgData, 'JPEG', 0, 10, pdfWidth, imgHeight);
+        pdf.save(`Summary_${type}_HN${patient.hn}.pdf`);
+        showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+    } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาด', 'error'); }
+};
         
         window.printDetailedPdf = async (type, pid) => {
-            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
-            showToast('กำลังเตรียมประวัติละเอียด...', 'info');
-            try {
-                const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
-                if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
-                const patient = pSnap.data();
+    if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF ลองใหม่อีกครั้ง', 'error');
+    showToast('กำลังเตรียมประวัติละเอียด...', 'info');
+    try {
+        const pSnap = await db.doc(`artifacts/${appId}/public/data/patients/${pid}`).get();
+        if(!pSnap.exists) return showToast('ไม่พบข้อมูล', 'error');
+        const patient = pSnap.data();
 
-                const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
-                const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
-                if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
+        const aSnap = await db.collection(`artifacts/${appId}/public/data/patients/${pid}/${type}_assessments`).get();
+        const assessments = aSnap.docs.map(d => d.data()).sort((a,b) => new Date(a.assessmentAt).getTime() - new Date(b.assessmentAt).getTime());
+        if(assessments.length === 0) return showToast('ไม่มีประวัติการประเมิน', 'error');
 
-                const container = document.createElement('div');
-                // FIX: Use fixed positioning
-                container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
-                const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
-                const sources = {
-                    aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
-                    braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
-                    dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
-                };
-                
-                let html = `
-                <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
-                    <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">ประวัติละเอียด ${titles[type]}</h2>
-                </div>
-                ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
-                <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
-                    <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
-                </div>`;
-                
-                let dict = {}; let labels = {};
-                if(type === 'dhf') { dict = assessmentDicts.dhf; labels = fieldLabels.dhf; }
-                else if(type === 'aws') { dict = assessmentDicts.aws; labels = fieldLabels.aws; }
-                else if(type === 'braden') { dict = assessmentDicts.braden; labels = fieldLabels.braden; }
-
-                assessments.forEach(a => {
-                    let res = a.level || a.risk;
-                    html += `<div style="border:1px solid #cbd5e1; border-radius:8px; margin-bottom:15px;">
-                        <div style="background:#e2e8f0; padding:10px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; font-weight:bold;">
-                            <span>${new Date(a.assessmentAt).toLocaleString('th-TH')} (เวร${a.shift||'-'})</span>
-                            <span style="color:#1d4ed8;">คะแนน: ${a.score} | ผลลัพธ์: ${res}</span>
-                        </div>
-                        <div style="padding:15px; font-size:13px;">
-                            <div style="margin-bottom:8px;"><strong>ผู้ประเมิน:</strong> ${a.assessor}</div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
-                    
-                    if(a.details) {
-                        let detailsKeys = Object.keys(a.details);
-                        detailsKeys.sort((k1, k2) => {
-                            let l1 = labels[k1] || k1;
-                            let l2 = labels[k2] || k2;
-                            let num1 = parseInt(l1.match(/^\d+/)) || 999;
-                            let num2 = parseInt(l2.match(/^\d+/)) || 999;
-                            if (numฉันได้รับการออกแบบมาเพื่อประมวลผลและเขียนข้อความเท่านั้น จึงช่วยคุณในเรื่องนี้ไม่ได้ 1 !== num2) return num1 - num2;
-                            return l1.localeCompare(l2);
-                        });
-
-                        detailsKeys.forEach(k => {
-                            let labelName = labels[k] || k;
-                            let val = a.details[k];
-                            // แปลงค่า boolean ของ checkbox
-                            if (val === 'true') val = 'ตรวจพบ';
-                            if (val === 'false') val = 'ไม่พบ';
-                            if (dict[k] && dict[k][val]) val = dict[k][val].replace(/\([^)]+\)/g, '').trim(); 
-                            html += `<div><strong>${labelName}:</strong> <span style="color:#475569;">${val}</span></div>`;
-                        });
-                    }
-                    if(type === 'aws') html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px;"><strong>ยาที่ให้:</strong> ${a.medication||'-'} | <strong>V/S:</strong> ${a.vitals||'-'} | <strong>ระดับความรู้สึกตัว:</strong> ${a.consciousness||'-'}</div>`;
-                    if(type === 'braden' && (a.ulcerLoc||a.ulcerStage)) html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px; color:#b91c1c;"><strong>แผลกดทับ:</strong> ตำแหน่ง ${a.ulcerLoc||'-'} | ขนาด ${a.ulcerSize||'-'} | ระดับ ${a.ulcerStage||'-'} | จำนวน ${a.ulcerQty||'-'}</div>`;
-                    html += `</div></div></div>`;
-                });
-                
-                container.innerHTML = html;
-                document.body.appendChild(container);
-
-                // FIX: ป้องกันปัญหาการสร้าง PDF ล้มเหลว (ERR_FAILED / ไฟล์เสีย) โดยรอให้ DOM โหลดเสร็จก่อนจับภาพ
-                await new Promise(r => setTimeout(r, 300));
-                
-                const canvas = await html2canvas(container, {
-                    scale: 2, 
-                    useCORS: true,
-                    backgroundColor: '#ffffff',
-                    windowWidth: 800,
-                    windowHeight: container.scrollHeight
-                });
-                
-                document.body.removeChild(container);
-
-                if (!canvas || canvas.width === 0 || canvas.height === 0) {
-                    return showToast('ไม่สามารถสร้างภาพเอกสารได้', 'error');
-                }
-
-                const pdfWidth = 210; 
-                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const { jsPDF } = window.jspdf;
-                
-                // ปรับขนาดหน้ากระดาษให้พอดีกับเนื้อหา
-                const pdf = new jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 20)]);
-                
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 10, pdfWidth, imgHeight);
-                pdf.save(`Detailed_${type}_HN${patient.hn}.pdf`);
-                showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
-            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลด PDF', 'error'); }
+        const container = document.createElement('div');
+        container.style.cssText = "position:fixed; top:0; left:0; width:800px; background:#fff; padding:40px; font-family:'Sarabun',sans-serif; color:#0f172a; z-index:-9999;";
+        const titles = { dhf: 'DHF ระยะวิกฤต', aws: 'ถอนพิษสุรา (AWS)', braden: 'แผลกดทับ (Braden)' };
+        const sources = {
+            aws: 'อ้างอิง: แบบบันทึกการติดตามอาการถอนพิษสุรารายบุคคลด้วยเครื่องมือ AWS (Alcohol Withdrawal Scale), แนวปฏิบัติการคัดกรองและบำบัดรักษาฟื้นฟูสภาพผู้มีปัญหาการดื่มสุรา, คณะอนุกรรมการพิจารณาด้านการบำบัดรักษาฟื้นฟูสภาพผู้ติดเครื่องดื่มแอลกอฮอล, กระทรวงสาธารณสุข, 2561',
+            braden: 'อ้างอิง: แบบประเมินของบราเดน (The Braden Scale for Predicting Pressure Sore Risk) ฝ่ายการพยาบาล โรงพยาบาลศิริราช, 2556',
+            dhf: 'อ้างอิง: แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)'
         };
         
-        const printCpgGeneric = async (id, filename) => {
-            if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF', 'error');
-            const el = document.getElementById(id);
-            showToast('กำลังสร้าง PDF คู่มือ...', 'info');
-            try {
-                // รอให้ Layout เข้าที่
-                await new Promise(r => setTimeout(r, 100));
+        let html = `
+        <div style="text-align:center; margin-bottom: ${sources[type] ? '10px' : '25px'}; padding-top: 10px;">
+            <h2 style="font-size:26px; font-weight:bold; margin:0; color: #0f172a;">ประวัติละเอียด ${titles[type]}</h2>
+        </div>
+        ${sources[type] ? `<div style="text-align:center; font-size:12.5px; color:#64748b; margin-bottom:25px; line-height: 1.5;">${sources[type]}</div>` : ''}
+        <div style="background:#f8fafc; padding:15px 20px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:25px; font-size:16px;">
+            <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
+        </div>`;
+        
+        let dict = {}; let labels = {};
+        if(type === 'dhf') { dict = assessmentDicts.dhf; labels = fieldLabels.dhf; }
+        else if(type === 'aws') { dict = assessmentDicts.aws; labels = fieldLabels.aws; }
+        else if(type === 'braden') { dict = assessmentDicts.braden; labels = fieldLabels.braden; }
 
-                const canvas = await html2canvas(el, {scale: 2, useCORS: true, backgroundColor: '#ffffff'});
-                const pdfWidth = 210; const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', [pdfWidth, Math.max(297, imgHeight + 10)]);
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 5, pdfWidth, imgHeight);
-                pdf.save(filename);
-                showToast('ดาวน์โหลด PDF คู่มือสำเร็จ', 'success');
-            } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลดคู่มือ', 'error'); }
-        };
+        assessments.forEach(a => {
+            let res = a.level || a.risk;
+            html += `<div style="border:1px solid #cbd5e1; border-radius:8px; margin-bottom:15px;">
+                <div style="background:#e2e8f0; padding:10px; border-bottom:1px solid #cbd5e1; display:flex; justify-content:space-between; font-weight:bold;">
+                    <span>${new Date(a.assessmentAt).toLocaleString('th-TH')} (เวร${a.shift||'-'})</span>
+                    <span style="color:#1d4ed8;">คะแนน: ${a.score} | ผลลัพธ์: ${res}</span>
+                </div>
+                <div style="padding:15px; font-size:13px;">
+                    <div style="margin-bottom:8px;"><strong>ผู้ประเมิน:</strong> ${a.assessor}</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">`;
+            
+            if(a.details) {
+                let detailsKeys = Object.keys(a.details);
+                detailsKeys.sort((k1, k2) => {
+                    let l1 = labels[k1] || k1;
+                    let l2 = labels[k2] || k2;
+                    let num1 = parseInt(l1.match(/^\d+/)) || 999;
+                    let num2 = parseInt(l2.match(/^\d+/)) || 999;
+                    if (num1 !== num2) return num1 - num2;
+                    return l1.localeCompare(l2);
+                });
+
+                detailsKeys.forEach(k => {
+                    let labelName = labels[k] || k;
+                    let val = a.details[k];
+                    if (val === 'true') val = 'ตรวจพบ';
+                    if (val === 'false') val = 'ไม่พบ';
+                    if (dict[k] && dict[k][val]) val = dict[k][val].replace(/\([^)]+\)/g, '').trim(); 
+                    html += `<div><strong>${labelName}:</strong> <span style="color:#475569;">${val}</span></div>`;
+                });
+            }
+            if(type === 'aws') html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px;"><strong>ยาที่ให้:</strong> ${a.medication||'-'} | <strong>V/S:</strong> ${a.vitals||'-'} | <strong>ระดับความรู้สึกตัว:</strong> ${a.consciousness||'-'}</div>`;
+            if(type === 'braden' && (a.ulcerLoc||a.ulcerStage)) html += `<div style="grid-column:span 2; margin-top:8px; border-top:1px dashed #cbd5e1; padding-top:8px; color:#b91c1c;"><strong>แผลกดทับ:</strong> ตำแหน่ง ${a.ulcerLoc||'-'} | ขนาด ${a.ulcerSize||'-'} | ระดับ ${a.ulcerStage||'-'} | จำนวน ${a.ulcerQty||'-'}</div>`;
+            html += `</div></div></div>`;
+        });
+        
+        container.innerHTML = html;
+        document.body.appendChild(container);
+
+        await new Promise(r => setTimeout(r, 300));
+        
+        const canvas = await html2canvas(container, {
+            scale: 2, 
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            windowWidth: 800,
+            windowHeight: container.scrollHeight
+        });
+        
+        document.body.removeChild(container);
+
+        // เปลี่ยนเป็น JPEG
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+        if (!imgData || imgData === 'data:,') {
+            return showToast('ข้อผิดพลาด: ความยาวข้อมูลเกินขีดจำกัด', 'error');
+        }
+
+        const pdfWidth = 210; 
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        // ปัดเศษทศนิยมเสมอ
+        const pageHeight = Math.ceil(Math.max(297, imgHeight + 20));
+        
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', [pdfWidth, pageHeight]);
+        
+        pdf.addImage(imgData, 'JPEG', 0, 10, pdfWidth, imgHeight);
+        pdf.save(`Detailed_${type}_HN${patient.hn}.pdf`);
+        showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+    } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลด PDF', 'error'); }
+};
+        
+        const printCpgGeneric = async (id, filename) => {
+    if (!window.jspdf || !window.html2canvas) return showToast('กำลังโหลดไลบรารี PDF', 'error');
+    const el = document.getElementById(id);
+    showToast('กำลังสร้าง PDF คู่มือ...', 'info');
+    try {
+        await new Promise(r => setTimeout(r, 100));
+
+        const canvas = await html2canvas(el, {scale: 2, useCORS: true, backgroundColor: '#ffffff'});
+        
+        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+        if (!imgData || imgData === 'data:,') {
+            return showToast('ไม่สามารถจับภาพได้', 'error');
+        }
+
+        const pdfWidth = 210; 
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pageHeight = Math.ceil(Math.max(297, imgHeight + 10));
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', [pdfWidth, pageHeight]);
+        
+        pdf.addImage(imgData, 'JPEG', 0, 5, pdfWidth, imgHeight);
+        pdf.save(filename);
+        showToast('ดาวน์โหลด PDF คู่มือสำเร็จ', 'success');
+    } catch(e) { console.error(e); showToast('เกิดข้อผิดพลาดในการโหลดคู่มือ', 'error'); }
+};
 
         window.printCpgPdf = () => printCpgGeneric('cpg-content-container', 'CPG_AWS.pdf');
         window.printCpgPiPdf = () => printCpgGeneric('cpg-pi-content-container', 'CPG_Pressure_Injury.pdf');

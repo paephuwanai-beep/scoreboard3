@@ -736,22 +736,23 @@
         };
 
         const fieldLabels = {
-            dhf: { 
-                vs_t: 'T (°C)', vs_hr: 'HR (bpm)', vs_rr: 'RR (/min)', vs_bp: 'BP (mmHg)', vs_pp: 'PP (SBP-DBP)',
-                rf_temp: '[เตือน] อุณหภูมิลดรวดเร็ว/ตัวเย็น',
-                rf_hr: '[เตือน] HR เร็ว/เบา',
-                rf_pp: '[เตือน] PP แคบ (≤ 20)',
-                rf_bp: '[เตือน] BP ตก',
-                rf_crt: '[เตือน] CRT > 2s/มือเท้าเย็น',
-                rf_urine: '[เตือน] Urine < 0.5 cc/kg/hr',
-                rf_bleed: '[เตือน] มีเลือดออกผิดปกติ',
-                rf_neuro: '[เตือน] ซึม/สับสน/ชัก',
-                rf_fluid: '[เตือน] หอบเหนื่อย/ตับโต/ท้องโต',
-                lab_hct: 'Hct (%)', lab_plt: 'Platelet', lab_dtx: 'DTX', lab_other: 'อื่นๆ' 
-            },
-            aws: { perspiration:'ภาวะเหงื่อออก', tremor:'อาการสั่น', anxiety:'ความวิตกกังวล', agitation:'ความกระวนกระวาย', temperature:'ระดับอุณหภูมิ', hallucination:'อาการประสาทหลอน', orientation:'การรับรู้เกี่ยวกับบุคคล เวลา สถานที่' },
-            braden: { sensory:'การรับรู้ความรู้สึก', moisture:'ความชื้นของผิวหนัง', activity:'ความสามารถในการทำกิจกรรม', mobility:'ความสามารถในการเคลื่อนไหว', nutrition:'ภาวะโภชนาการ', friction:'แรงเสียดสีและแรงเลื่อน' }
-        };
+    dhf: { 
+        vs_t: 'T (°C)', vs_hr: 'HR (bpm)', vs_rr: 'RR (/min)', vs_bp: 'BP (mmHg)', vs_pp: 'PP (SBP-DBP)',
+        rf_temp: '[เตือน] อุณหภูมิลดรวดเร็ว/ตัวเย็น',
+        rf_hr: '[เตือน] HR เร็ว/เบา',
+        rf_pp: '[เตือน] PP แคบ (≤ 20)',
+        rf_bp: '[เตือน] BP ตก',
+        rf_crt: '[เตือน] CRT > 2s/มือเท้าเย็น',
+        rf_urine: '[เตือน] Urine < 0.5 cc/kg/hr',
+        rf_bleed: '[เตือน] มีเลือดออกผิดปกติ',
+        rf_neuro: '[เตือน] ซึม/สับสน/ชัก',
+        rf_fluid: '[เตือน] หอบเหนื่อย/ตับโต/ท้องโต',
+        lab_hct: 'Hct (%)', lab_plt: 'Platelet', lab_dtx: 'DTX', lab_other: 'อื่นๆ',
+        intervention: 'การจัดการเพิ่มเติม (Intervention)' // <-- เพิ่มบรรทัดนี้
+    },
+    aws: { perspiration:'ภาวะเหงื่อออก', tremor:'อาการสั่น', anxiety:'ความวิตกกังวล', agitation:'ความกระวนกระวาย', temperature:'ระดับอุณหภูมิ', hallucination:'อาการประสาทหลอน', orientation:'การรับรู้เกี่ยวกับบุคคล เวลา สถานที่' },
+    braden: { sensory:'การรับรู้ความรู้สึก', moisture:'ความชื้นของผิวหนัง', activity:'ความสามารถในการทำกิจกรรม', mobility:'ความสามารถในการเคลื่อนไหว', nutrition:'ภาวะโภชนาการ', friction:'แรงเสียดสีและแรงเลื่อน' }
+};
 
         const initAuth = async () => {
             try {
@@ -1519,89 +1520,102 @@
             let html = renderPatientHeader(type);
 
             if (type === 'dhf') {
-                html += `<div class="card border-t-4 border-red-600 shadow-xl glass">
-                        <div class="border-b border-white/60 pb-4 mb-6">
-                            <h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-red-600 text-2xl">🩸</span> แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)</h3>
-                            <p class="text-slate-600 text-sm mt-1 font-medium drop-shadow-sm">แบบเฝ้าระวังและประเมินภาวะช็อกในผู้ป่วยไข้เลือดออก</p>
-                        </div>
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div class="lg:col-span-2">
-                                <form id="dhf-form" class="space-y-5 mb-6">
-                                    <!-- Section 1: V/S -->
-                                    <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
-                                        <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">📈</span> 1. สัญญาณชีพ (Vital Signs)</h4>
-                                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">T (°C)</label><input type="number" step="0.1" name="vs_t" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">HR (bpm)</label><input type="number" name="vs_hr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">RR (/min)</label><input type="number" name="vs_rr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">BP (mmHg)</label><input type="text" name="vs_bp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="110/70"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">PP (SBP-DBP)</label><input type="number" name="vs_pp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="<=20"></div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Section 2: Checklists -->
-                                    <div class="bg-red-50/60 backdrop-blur-sm p-5 rounded-2xl border border-red-200/60 shadow-inner">
-                                        <h4 class="font-extrabold text-red-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🚨</span> 2. สัญญาณเตือนอันตราย (Red Flags)</h4>
-                                        <p class="text-xs text-red-600 font-bold mb-4 bg-white/60 inline-block px-2 py-1 rounded">ติ๊กเลือกอาการที่ตรวจพบ (1 ข้อ = 1 คะแนนความเสี่ยง)</p>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_temp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">อุณหภูมิลดลงอย่างรวดเร็วร่วมกับเหงื่อออก/ตัวเย็น</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_hr" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">HR เร็วและเบา (Tachycardia)</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_pp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">Pulse Pressure แคบลง (≤ 20 mmHg)</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_bp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">ความดันโลหิตตก (Hypotension)</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_crt" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">CRT > 2 วินาที / ปลายมือปลายเท้าเย็นลาย</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_urine" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">Urine Output < 0.5 cc/kg/hr หรือไม่มีปัสสาวะ</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_bleed" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">มีเลือดออกรุนแรง (อาเจียนเป็นเลือด, ถ่ายดำ)</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
-                                                <input type="checkbox" name="rf_neuro" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">ซึมลง, สับสน, กระสับกระส่าย, ชัก</span>
-                                            </label>
-                                            <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100 md:col-span-2">
-                                                <input type="checkbox" name="rf_fluid" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
-                                                <span class="text-sm font-bold text-slate-700">หายใจหอบเหนื่อย / SpO2 ลด / ท้องโต / ตับโตและกดเจ็บมาก (อาการน้ำเกิน/รั่ว)</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    <!-- Section 3: Labs -->
-                                    <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
-                                        <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🧪</span> 3. ผลทางห้องปฏิบัติการ (Lab Monitoring)</h4>
-                                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">Hct (%)</label><input type="number" step="0.1" name="lab_hct" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">Platelet (cell/mm³)</label><input type="number" name="lab_plt" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">Blood Sugar (mg/dL)</label><input type="number" name="lab_dtx" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
-                                            <div><label class="text-xs font-bold text-slate-600 block mb-1">อื่นๆ (LFT, Coag, Elyte)</label><input type="text" name="lab_other" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80" placeholder="ระบุค่า"></div>
-                                        </div>
-                                    </div>
-                                </form>
-                                ${renderFooter('dhf')}
-                            </div>
-                            <div class="lg:col-span-1 flex flex-col">
-                                <div id="dhf-infographic-container" class="flex-1"></div>
-                                <button class="btn-secondary w-full mt-4 text-sm flex justify-center items-center gap-2 glass hover:bg-white/80 shadow-md py-3 font-bold border-white/60 transition-transform hover:-translate-y-1" onclick="window.downloadDhfInfographic()"><span class="icon-3d text-lg">📥</span> บันทึกรูปภาพคำแนะนำ</button>
+    html += `<div class="card border-t-4 border-red-600 shadow-xl glass">
+            <div class="border-b border-white/60 pb-4 mb-6">
+                <h3 class="font-extrabold text-slate-800 text-xl flex items-center gap-2 drop-shadow-sm"><span class="text-red-600 text-2xl">🩸</span> แบบประเมินผู้ป่วย DHF ระยะวิกฤต (Critical Care Checklist)</h3>
+                <p class="text-slate-600 text-sm mt-1 font-medium drop-shadow-sm">แบบเฝ้าระวังและประเมินภาวะช็อกในผู้ป่วยไข้เลือดออก</p>
+                <!-- เพิ่มที่มาของแบบประเมินตรงนี้ -->
+                <p class="text-slate-500 text-[11.5px] mt-1.5 font-medium drop-shadow-sm leading-relaxed"><b>ที่มา:</b> แนวทางเวชปฏิบัติการดูแลผู้ป่วยโรคไข้เลือดออก (Clinical Practice Guideline for Dengue Infection) กรมการแพทย์</p>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <form id="dhf-form" class="space-y-5 mb-6">
+                        <!-- Section 1: V/S -->
+                        <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
+                            <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">📈</span> 1. สัญญาณชีพ (Vital Signs)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">T (°C)</label><input type="number" step="0.1" name="vs_t" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">HR (bpm)</label><input type="number" name="vs_hr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">RR (/min)</label><input type="number" name="vs_rr" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">BP (mmHg)</label><input type="text" name="vs_bp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="110/70"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">PP (SBP-DBP)</label><input type="number" name="vs_pp" class="form-input dhf-input text-center font-bold text-slate-800 bg-white/80" placeholder="<=20"></div>
                             </div>
                         </div>
-                    </div>`;
+
+                        <!-- Section 2: Checklists -->
+                        <div class="bg-red-50/60 backdrop-blur-sm p-5 rounded-2xl border border-red-200/60 shadow-inner">
+                            <h4 class="font-extrabold text-red-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🚨</span> 2. สัญญาณเตือนอันตราย (Red Flags)</h4>
+                            <p class="text-xs text-red-600 font-bold mb-4 bg-white/60 inline-block px-2 py-1 rounded">ติ๊กเลือกอาการที่ตรวจพบ (1 ข้อ = 1 คะแนนความเสี่ยง)</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-4">
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_temp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">อุณหภูมิลดลงอย่างรวดเร็วร่วมกับเหงื่อออก/ตัวเย็น</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_hr" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">HR เร็วและเบา (Tachycardia)</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_pp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">Pulse Pressure แคบลง (≤ 20 mmHg)</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_bp" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">ความดันโลหิตตก (Hypotension)</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_crt" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">CRT > 2 วินาที / ปลายมือปลายเท้าเย็นลาย</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_urine" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">Urine Output < 0.5 cc/kg/hr หรือไม่มีปัสสาวะ</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_bleed" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">มีเลือดออกรุนแรง (อาเจียนเป็นเลือด, ถ่ายดำ)</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100">
+                                    <input type="checkbox" name="rf_neuro" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">ซึมลง, สับสน, กระสับกระส่าย, ชัก</span>
+                                </label>
+                                <label class="flex items-start gap-3 p-2 hover:bg-white/40 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-red-100 md:col-span-2">
+                                    <input type="checkbox" name="rf_fluid" class="mt-0.5 w-5 h-5 text-red-600 rounded border-red-300 focus:ring-red-500 dhf-check" onchange="window.calcDhf()">
+                                    <span class="text-sm font-bold text-slate-700">หายใจหอบเหนื่อย / SpO2 ลด / ท้องโต / ตับโตและกดเจ็บมาก (อาการน้ำเกิน/รั่ว)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Labs -->
+                        <div class="glass p-5 rounded-2xl border border-white/80 shadow-sm">
+                            <h4 class="font-extrabold text-slate-800 mb-4 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d text-xl">🧪</span> 3. ผลทางห้องปฏิบัติการ (Lab Monitoring)</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">Hct (%)</label><input type="number" step="0.1" name="lab_hct" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">Platelet (cell/mm³)</label><input type="number" name="lab_plt" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">Blood Sugar (mg/dL)</label><input type="number" name="lab_dtx" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80"></div>
+                                <div><label class="text-xs font-bold text-slate-600 block mb-1">อื่นๆ (LFT, Coag, Elyte)</label><input type="text" name="lab_other" class="form-input dhf-input text-center font-bold text-blue-800 bg-white/80" placeholder="ระบุค่า"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW Section 4: Intervention -->
+                        <div class="bg-red-50/60 backdrop-blur-sm p-5 rounded-2xl border border-red-200/50 shadow-inner">
+                            <h4 class="font-extrabold text-red-900 mb-3 flex items-center gap-2 drop-shadow-sm"><span class="icon-3d">💉</span> 4. การจัดการพยาบาล (Interventions)</h4>
+                            <div>
+                                <label class="text-xs font-bold text-slate-700 block mb-1.5 uppercase drop-shadow-sm">สารน้ำที่ให้ / การจัดการเพิ่มเติม (Management)</label>
+                                <input type="text" name="intervention" class="form-input dhf-input w-full text-sm py-2.5 shadow-sm bg-white/90 font-bold border-red-300/50" placeholder="เช่น Load 0.9% NSS 500 ml IV in 1 hr, เจาะ Hct ซ้ำ">
+                            </div>
+                        </div>
+
+                    </form>
+                    ${renderFooter('dhf')}
+                </div>
+                <div class="lg:col-span-1 flex flex-col">
+                    <div id="dhf-infographic-container" class="flex-1"></div>
+                    <button class="btn-secondary w-full mt-4 text-sm flex justify-center items-center gap-2 glass hover:bg-white/80 shadow-md py-3 font-bold border-white/60 transition-transform hover:-translate-y-1" onclick="window.downloadDhfInfographic()"><span class="icon-3d text-lg">📥</span> บันทึกรูปภาพคำแนะนำ</button>
+                </div>
+            </div>
+        </div>`;
+}
             } else if (type === 'aws') {
                  html += `<div class="card border-t-4 border-blue-600 shadow-xl glass">
                          <div class="border-b border-white/60 pb-4 mb-6">

@@ -2263,10 +2263,11 @@
                     <strong>ชื่อ:</strong> ${patient.name} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>HN:</strong> ${patient.hn} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>AN:</strong> ${patient.an||'-'} &nbsp;&nbsp;|&nbsp;&nbsp; <strong>เตียง:</strong> ${patient.bed||'-'}
                 </div>`;
                 
+                // แก้บั๊กตรงนี้: ใส่ || {} เพื่อป้องกัน undefined crash
                 let dict = {}; let labels = {};
-                if(type === 'dhf') { dict = assessmentDicts.dhf; labels = fieldLabels.dhf; }
-                else if(type === 'aws') { dict = assessmentDicts.aws; labels = fieldLabels.aws; }
-                else if(type === 'braden') { dict = assessmentDicts.braden; labels = fieldLabels.braden; }
+                if(type === 'dhf') { dict = assessmentDicts.dhf || {}; labels = fieldLabels.dhf || {}; }
+                else if(type === 'aws') { dict = assessmentDicts.aws || {}; labels = fieldLabels.aws || {}; }
+                else if(type === 'braden') { dict = assessmentDicts.braden || {}; labels = fieldLabels.braden || {}; }
 
                 assessments.forEach(a => {
                     let res = a.level || a.risk;
@@ -2282,8 +2283,8 @@
                     if(a.details) {
                         let detailsKeys = Object.keys(a.details);
                         detailsKeys.sort((k1, k2) => {
-                            let l1 = labels[k1] || k1;
-                            let l2 = labels[k2] || k2;
+                            let l1 = String(labels[k1] || k1); // บังคับเป็น String
+                            let l2 = String(labels[k2] || k2); // บังคับเป็น String
                             let num1 = parseInt(l1.match(/^\d+/)) || 999;
                             let num2 = parseInt(l2.match(/^\d+/)) || 999;
                             if (num1 !== num2) return num1 - num2;
@@ -2293,9 +2294,12 @@
                         detailsKeys.forEach(k => {
                             let labelName = labels[k] || k;
                             let val = a.details[k];
-                            if (val === 'true') val = 'ตรวจพบ';
-                            if (val === 'false') val = 'ไม่พบ';
-                            if (dict[k] && dict[k][val]) val = dict[k][val].replace(/\([^)]+\)/g, '').trim(); 
+                            if (val === 'true' || val === true) val = 'ตรวจพบ';
+                            if (val === 'false' || val === false) val = 'ไม่พบ';
+                            
+                            // ป้องกันแครชหาก dict[k] ไม่มีอยู่
+                            if (dict[k] && dict[k][val]) val = String(dict[k][val]).replace(/\([^)]+\)/g, '').trim(); 
+                            
                             html += `<div><strong>${labelName}:</strong> <span style="color:#475569;">${val}</span></div>`;
                         });
                     }

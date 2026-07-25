@@ -215,10 +215,10 @@
                         </div>
                     </div>
 
-                    <div id="dashboard-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                        
-                        <!-- DHF Table -->
-                        <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col xl:col-span-2">
+                    <div id="dashboard-grid" class="grid grid-cols-1 gap-6">
+    
+                         <!-- DHF Table -->
+                            <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-red-600 p-1.5 rounded-lg shadow-sm icon-3d border-red-200/50">🩸</span> เฝ้าระวัง DHF ระยะวิกฤต <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
                                 <button class="bg-red-50/80 hover:bg-red-100/90 text-red-700 border border-red-200/50 transition-colors px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm flex items-center gap-1 backdrop-blur-sm" onclick="window.openEnrollModal('dhf')">
@@ -920,12 +920,12 @@
             if (addBtn) addBtn.style.display = (type === 'discharged') ? 'none' : 'flex';
 
             if (type === 'all') {
-                grid.className = 'grid grid-cols-1 xl:grid-cols-2 gap-6';
+                grid.className = 'grid grid-cols-1 gap-6'; // แก้ให้เป็น 1 คอลัมน์
                 sections.forEach(s => document.getElementById(`dashboard-${s}-section`).classList.remove('hidden'));
                 titleEl.textContent = 'Executive Dashboard';
                 if(subtitleEl) subtitleEl.textContent = 'ภาพรวมผู้ป่วยรับใหม่และการเฝ้าระวังความเสี่ยง';
             } else if (type === 'discharged') {
-                grid.className = 'grid grid-cols-1 xl:grid-cols-2 gap-6';
+                grid.className = 'grid grid-cols-1 gap-6'; // แก้ให้เป็น 1 คอลัมน์
                 sections.forEach(s => document.getElementById(`dashboard-${s}-section`).classList.remove('hidden'));
                 titleEl.textContent = 'แฟ้มประวัติผู้ป่วยจำหน่ายแล้ว (D/C)';
                 if(subtitleEl) subtitleEl.textContent = 'ประวัติการประเมินของผู้ป่วยที่จำหน่ายแล้ว';

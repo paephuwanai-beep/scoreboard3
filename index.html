@@ -71,7 +71,8 @@
         
         .countdown-cell span { display: inline-block; min-width: 100px; font-variant-numeric: tabular-nums; }
         .nav-item { transition: all 0.2s; }
-        .nav-item.active { background: rgba(255, 255, 255, 0.1); border-left-color: #60a5fa; color: white; font-weight: 600; box-shadow: inset 0 0 15px rgba(255,255,255,0.05); }
+        .nav-item:hover { background-color: #2563eb !important; color: white !important; border-left-color: #60a5fa; }
+        .nav-item.active { background-color: #1d4ed8 !important; border-left-color: #93c5fd !important; color: white !important; font-weight: 600; box-shadow: inset 0 2px 10px rgba(0,0,0,0.2) !important; }
 
         /* Dashboard Stat Cards */
         .stat-card { transition: all 0.3s ease; }
@@ -214,6 +215,7 @@
                     <div id="dashboard-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         
                         <!-- DHF Table -->
+                        <th class="px-4 py-3 font-bold col-next-assess">รอบประเมินถัดไป</th>
                         <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col xl:col-span-2">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-red-600 p-1.5 rounded-lg shadow-sm icon-3d border-red-200/50">🩸</span> เฝ้าระวัง DHF ระยะวิกฤต <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
@@ -225,6 +227,7 @@
                         </div>
 
                         <!-- AWS Table -->
+                        <th class="px-4 py-3 font-bold col-next-assess">รอบประเมินถัดไป</th>
                         <div id="dashboard-aws-section" class="card border-t-4 border-blue-500 !mb-0 flex flex-col">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-blue-600 p-1.5 rounded-lg shadow-sm icon-3d border-blue-200/50">🍷</span> ถอนพิษสุรา (AWS) <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
@@ -236,6 +239,7 @@
                         </div>
                         
                         <!-- Braden Table -->
+                        <th class="px-4 py-3 font-bold col-next-assess">รอบประเมินถัดไป</th>
                         <div id="dashboard-braden-section" class="card border-t-4 border-teal-500 !mb-0 flex flex-col">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-teal-600 p-1.5 rounded-lg shadow-sm icon-3d border-teal-200/50">🛏️</span> แผลกดทับ (Braden) <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
@@ -1176,6 +1180,11 @@
             const filteredPatients = window.allPatientsList.filter(p => (p.status || 'Admit อยู่') === targetStatus);
             const types = ['dhf', 'aws', 'braden'];
 
+            // เพิ่มโค้ดนี้เพื่อซ่อนหัวตาราง (th) เมื่ออยู่ในหน้า D/C
+            document.querySelectorAll('.col-next-assess').forEach(el => {
+                el.style.display = isDischarged ? 'none' : 'table-cell';
+            });
+            
             types.forEach(type => {
                 const tbody = document.getElementById(`home-${type}-body`);
                 if (!tbody) return;
@@ -1226,7 +1235,7 @@
                             <div class="text-[11px] text-slate-600 font-bold drop-shadow-sm">AN: ${p.an || '-'}</div>
                         </td>
                         <td class="px-4 py-3 text-center">${scoreHtml}</td>
-                        <td class="px-4 py-3">${nextHtml}</td>
+                        <td class="px-4 py-3 col-next-assess" style="display: ${isDischarged ? 'none' : 'table-cell'}">${nextHtml}</td>
                         <td class="px-4 py-3 text-center">
                             <div class="flex flex-wrap justify-center gap-1.5">
                                 <button class="text-white bg-slate-700 hover:bg-slate-800 rounded px-3 py-1 text-[11px] font-bold shadow-md transition-transform hover:scale-105 border border-white/20" onclick="window.selectPatient('${p.id}', '${type}')">ประเมิน</button>

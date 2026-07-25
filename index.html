@@ -158,6 +158,7 @@
                 <li><a href="#" onclick="window.showDashboard('cpg-pi')" id="nav-cpg-pi" class="nav-item flex items-center px-6 py-3 text-sm gap-3"><span class="text-xl icon-3d">🩹</span> CPG of Pressure Injury</a></li>
 
                 <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">แฟ้มประวัติ</li>
+                <li><a href="#" onclick="window.showDashboard('untracked')" id="nav-untracked" class="nav-item flex items-center px-6 py-3 text-sm gap-3"><span class="text-xl icon-3d">🛑</span> เลิกติดตาม (ยัง Admit)</a></li>
                 <li><a href="#" onclick="window.showDashboard('discharged')" id="nav-discharged" class="nav-item flex items-center px-6 py-3 text-sm gap-3"><span class="text-xl icon-3d">📁</span> ผู้ป่วยจำหน่ายแล้ว (D/C)</a></li>
 
                 <li class="px-6 py-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-5 drop-shadow-sm">ตั้งค่าระบบ</li>
@@ -191,6 +192,7 @@
             <a href="#" onclick="window.showDashboard('cpg-dhf'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-red-300 nav-item flex items-center gap-3"><span class="text-lg">🦟</span> CPG of DHF</a>
             <a href="#" onclick="window.showDashboard('cpg'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-yellow-300 nav-item flex items-center gap-3"><span class="text-lg">📖</span> CPG of AWS</a>
             <a href="#" onclick="window.showDashboard('cpg-pi'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-pink-300 nav-item flex items-center gap-3"><span class="text-lg">🩹</span> CPG of Pressure Injury</a>
+            <a href="#" onclick="window.showDashboard('untracked'); window.toggleMobileMenu()" class="px-6 py-4 border-b border-white/5 text-gray-300 nav-item flex items-center gap-3"><span class="text-lg">🛑</span> เลิกติดตาม (ยัง Admit)</a>
             <a href="#" onclick="window.showDashboard('discharged'); window.toggleMobileMenu()" class="px-6 py-4 text-gray-400 nav-item flex items-center gap-3"><span class="text-lg">📁</span> ผู้ป่วยจำหน่ายแล้ว</a>
         </div>
 
@@ -215,10 +217,11 @@
                         </div>
                     </div>
 
+                    <!-- แก้ให้เป็น 1 คอลัมน์ (grid-cols-1) เสมอ ตามความต้องการ -->
                     <div id="dashboard-grid" class="grid grid-cols-1 gap-6">
-    
-                         <!-- DHF Table -->
-                            <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col">
+                        
+                        <!-- DHF Table -->
+                        <div id="dashboard-dhf-section" class="card border-t-4 border-red-500 !mb-0 flex flex-col">
                             <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
                                 <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2"><span class="glass text-red-600 p-1.5 rounded-lg shadow-sm icon-3d border-red-200/50">🩸</span> เฝ้าระวัง DHF ระยะวิกฤต <span class="text-[10px] text-slate-600 font-bold bg-slate-100/80 px-2 py-0.5 rounded-full border border-slate-200/50 tracking-wide backdrop-blur-sm">เฉพาะกลุ่มเสี่ยง</span></h2>
                                 <button class="bg-red-50/80 hover:bg-red-100/90 text-red-700 border border-red-200/50 transition-colors px-3 py-1.5 rounded-xl text-sm font-bold shadow-sm flex items-center gap-1 backdrop-blur-sm" onclick="window.openEnrollModal('dhf')">
@@ -917,18 +920,27 @@
             const grid = document.getElementById('dashboard-grid');
 
             const addBtn = document.getElementById('main-add-patient-btn');
-            if (addBtn) addBtn.style.display = (type === 'discharged') ? 'none' : 'flex';
+            if (addBtn) addBtn.style.display = (type === 'discharged' || type === 'untracked') ? 'none' : 'flex';
+
+            let viewMode = 'active';
 
             if (type === 'all') {
-                grid.className = 'grid grid-cols-1 gap-6'; // แก้ให้เป็น 1 คอลัมน์
+                grid.className = 'grid grid-cols-1 gap-6';
                 sections.forEach(s => document.getElementById(`dashboard-${s}-section`).classList.remove('hidden'));
                 titleEl.textContent = 'Executive Dashboard';
                 if(subtitleEl) subtitleEl.textContent = 'ภาพรวมผู้ป่วยรับใหม่และการเฝ้าระวังความเสี่ยง';
             } else if (type === 'discharged') {
-                grid.className = 'grid grid-cols-1 gap-6'; // แก้ให้เป็น 1 คอลัมน์
+                viewMode = 'discharged';
+                grid.className = 'grid grid-cols-1 gap-6';
                 sections.forEach(s => document.getElementById(`dashboard-${s}-section`).classList.remove('hidden'));
                 titleEl.textContent = 'แฟ้มประวัติผู้ป่วยจำหน่ายแล้ว (D/C)';
                 if(subtitleEl) subtitleEl.textContent = 'ประวัติการประเมินของผู้ป่วยที่จำหน่ายแล้ว';
+            } else if (type === 'untracked') {
+                viewMode = 'untracked';
+                grid.className = 'grid grid-cols-1 gap-6';
+                sections.forEach(s => document.getElementById(`dashboard-${s}-section`).classList.remove('hidden'));
+                titleEl.textContent = 'ผู้ป่วยที่เลิกติดตาม (ยัง Admit อยู่)';
+                if(subtitleEl) subtitleEl.textContent = 'รายชื่อผู้ป่วยที่ยุติการประเมินแล้ว แต่ยังไม่ได้จำหน่ายออกจากตึก';
             } else {
                 grid.className = 'grid grid-cols-1 gap-6';
                 sections.forEach(s => {
@@ -940,7 +952,7 @@
                 if(subtitleEl) subtitleEl.textContent = 'จัดการรายชื่อผู้ป่วยและบันทึกคะแนน';
             }
             
-            renderPatientTables(type === 'discharged');
+            renderPatientTables(viewMode);
         };
 
         function showPage(pageId) {
@@ -981,18 +993,33 @@
             document.getElementById('appModal').style.display = 'block';
         }
 
-        window.goToNextPatient = () => {
-            if(!currentAssessmentType || !currentPatientData) return;
-            const list = window.allPatientsList.filter(p => {
-                const isDischargedView = window.currentDashboardView === 'discharged';
+        function getFilteredPatientsList() {
+            return window.allPatientsList.filter(p => {
+                const viewMode = (window.currentDashboardView === 'discharged') ? 'discharged' 
+                               : (window.currentDashboardView === 'untracked' ? 'untracked' : 'active');
                 const pStatus = p.status || 'Admit อยู่';
-                const statusMatch = (isDischargedView && pStatus === 'จำหน่ายแล้ว') || (!isDischargedView && pStatus === 'Admit อยู่');
-                if (!statusMatch) return false;
-                if (currentAssessmentType === 'dhf' && !p.enrolledDhf) return false;
-                if (currentAssessmentType === 'aws' && !p.enrolledAws) return false;
-                if (currentAssessmentType === 'braden' && !p.enrolledBraden) return false;
+                
+                const isEnrolled = currentAssessmentType === 'dhf' ? p.enrolledDhf : (currentAssessmentType === 'aws' ? p.enrolledAws : p.enrolledBraden);
+                const hasHistory = p[`${currentAssessmentType}_latestAssessmentAt`] !== undefined;
+
+                if (viewMode === 'discharged') {
+                    if (pStatus !== 'จำหน่ายแล้ว') return false;
+                    if (!hasHistory) return false;
+                } else if (viewMode === 'untracked') {
+                    if (pStatus === 'จำหน่ายแล้ว') return false;
+                    if (isEnrolled) return false;
+                    if (!hasHistory) return false;
+                } else {
+                    if (pStatus === 'จำหน่ายแล้ว') return false;
+                    if (!isEnrolled) return false;
+                }
                 return true;
             });
+        }
+
+        window.goToNextPatient = () => {
+            if(!currentAssessmentType || !currentPatientData) return;
+            const list = getFilteredPatientsList();
             if (!list || list.length === 0) return;
             const currentIndex = list.findIndex(p => p.id === currentPatientData.id);
             if (currentIndex !== -1 && currentIndex < list.length - 1) {
@@ -1004,16 +1031,7 @@
         }
         
         function renderPatientNavBar(currentId) {
-            const list = window.allPatientsList.filter(p => {
-                const isDischargedView = window.currentDashboardView === 'discharged';
-                const pStatus = p.status || 'Admit อยู่';
-                const statusMatch = (isDischargedView && pStatus === 'จำหน่ายแล้ว') || (!isDischargedView && pStatus === 'Admit อยู่');
-                if (!statusMatch) return false;
-                if (currentAssessmentType === 'dhf' && !p.enrolledDhf) return false;
-                if (currentAssessmentType === 'aws' && !p.enrolledAws) return false;
-                if (currentAssessmentType === 'braden' && !p.enrolledBraden) return false;
-                return true;
-            });
+            const list = getFilteredPatientsList();
 
             if(list.length === 0) return '';
             let html = '<div class="flex overflow-x-auto gap-2 mb-4 pb-2 patient-nav-scroll">';
@@ -1037,7 +1055,7 @@
             return html;
         }
 
-        function loadPatientTablesOnHome(isDischarged = false) {
+        function loadPatientTablesOnHome() {
             if (!auth.currentUser) return;
             if (unsubscribes['patients']) unsubscribes['patients']();
             
@@ -1065,8 +1083,10 @@
                 if(document.getElementById('stat-aws-risk')) document.getElementById('stat-aws-risk').textContent = statAws;
                 if(document.getElementById('stat-braden-risk')) document.getElementById('stat-braden-risk').textContent = statBraden;
 
-                const viewingDischarged = window.currentDashboardView === 'discharged';
-                renderPatientTables(viewingDischarged);
+                let viewMode = 'active';
+                if (window.currentDashboardView === 'discharged') viewMode = 'discharged';
+                if (window.currentDashboardView === 'untracked') viewMode = 'untracked';
+                renderPatientTables(viewMode);
                 
                 if (window.currentDashboardView === 'bed-overview') {
                     window.renderBedOverview();
@@ -1175,14 +1195,24 @@
             }, 50);
         };
 
-        function renderPatientTables(isDischarged) {
-            const targetStatus = isDischarged ? 'จำหน่ายแล้ว' : 'Admit อยู่';
-            const filteredPatients = window.allPatientsList.filter(p => (p.status || 'Admit อยู่') === targetStatus);
+        window.reEnrollPatient = (pid, type) => {
+            const updateData = {}; 
+            const targetFlag = type === 'dhf' ? 'enrolledDhf' : (type === 'aws' ? 'enrolledAws' : 'enrolledBraden');
+            updateData[targetFlag] = true;
+            db.doc(`artifacts/${appId}/public/data/patients/${pid}`).update(updateData).then(() => {
+                showToast('ดึงผู้ป่วยกลับเข้าตารางสำเร็จ', 'success');
+            }).catch(e => {
+                console.error(e);
+                showToast('เกิดข้อผิดพลาด', 'error');
+            });
+        };
+
+        function renderPatientTables(viewMode) {
             const types = ['dhf', 'aws', 'braden'];
 
-            // ซ่อนหรือแสดงคอลัมน์ "รอบประเมินถัดไป" ขึ้นอยู่กับว่าเป็นหน้าจำหน่ายแล้วหรือไม่
+            // ซ่อนคอลัมน์ "รอบประเมินถัดไป" สำหรับหน้า Discharged และ Untracked
             document.querySelectorAll('.th-next-asmnt').forEach(th => {
-                th.style.display = isDischarged ? 'none' : 'table-cell';
+                th.style.display = (viewMode === 'discharged' || viewMode === 'untracked') ? 'none' : 'table-cell';
             });
 
             types.forEach(type => {
@@ -1190,10 +1220,24 @@
                 if (!tbody) return;
                 tbody.innerHTML = '';
                 let count = 0;
-                filteredPatients.forEach(p => {
-                    if (type === 'dhf' && !p.enrolledDhf) return;
-                    if (type === 'aws' && !p.enrolledAws) return;
-                    if (type === 'braden' && !p.enrolledBraden) return;
+
+                window.allPatientsList.forEach(p => {
+                    const pStatus = p.status || 'Admit อยู่';
+                    const isEnrolled = type === 'dhf' ? p.enrolledDhf : (type === 'aws' ? p.enrolledAws : p.enrolledBraden);
+                    const hasHistory = p[`${type}_latestAssessmentAt`] !== undefined;
+
+                    if (viewMode === 'discharged') {
+                        if (pStatus !== 'จำหน่ายแล้ว') return;
+                        if (!hasHistory) return;
+                    } else if (viewMode === 'untracked') {
+                        if (pStatus === 'จำหน่ายแล้ว') return;
+                        if (isEnrolled) return;
+                        if (!hasHistory) return;
+                    } else {
+                        if (pStatus === 'จำหน่ายแล้ว') return;
+                        if (!isEnrolled) return;
+                    }
+
                     count++;
 
                     let scoreHtml = '-', nextHtml = '-';
@@ -1215,9 +1259,8 @@
                         scoreHtml = `<span class="text-slate-400 font-bold drop-shadow-sm">-</span>`;
                     }
 
-                    // เพิ่มคอลัมน์ประเมินถัดไปเฉพาะหน้า "ภาพรวม" ไม่ใช่หน้า "จำหน่ายแล้ว"
                     let nextTdHtml = '';
-                    if (!isDischarged) {
+                    if (viewMode === 'active') {
                         if (nextAssessmentAtStr) {
                             nextHtml = `<div id="next-asmnt-${type}-${p.id}" class="countdown-cell drop-shadow-sm" data-next-assessment="${new Date(nextAssessmentAtStr).getTime()}"></div>`;
                         } else {
@@ -1226,7 +1269,14 @@
                         nextTdHtml = `<td class="px-4 py-3">${nextHtml}</td>`;
                     }
 
-                    let deleteBtnHtml = `<button class="text-red-600 bg-red-50/80 hover:bg-red-100/90 border border-red-200/50 backdrop-blur-sm rounded px-2.5 py-1 text-[11px] font-bold transition-colors" onclick="window.unenrollPatient('${p.id}', '${type}')">นำออก</button>`;
+                    let actionBtnHtml = '';
+                    if (viewMode === 'active') {
+                        actionBtnHtml = `<button class="text-red-600 bg-red-50/80 hover:bg-red-100/90 border border-red-200/50 backdrop-blur-sm rounded px-2.5 py-1 text-[11px] font-bold transition-colors" onclick="window.unenrollPatient('${p.id}', '${type}')">นำออก</button>`;
+                    } else if (viewMode === 'untracked') {
+                        actionBtnHtml = `<button class="text-emerald-600 bg-emerald-50/80 hover:bg-emerald-100/90 border border-emerald-200/50 backdrop-blur-sm rounded px-2.5 py-1 text-[11px] font-bold transition-colors" onclick="window.reEnrollPatient('${p.id}', '${type}')">ดึงกลับ</button>`;
+                    }
+
+                    const btnEvalText = (viewMode === 'untracked' || viewMode === 'discharged') ? 'ประวัติ/ประเมิน' : 'ประเมิน';
 
                     const tr = document.createElement('tr');
                     tr.className = 'border-b border-white/30 transition-colors';
@@ -1243,9 +1293,9 @@
                         ${nextTdHtml}
                         <td class="px-4 py-3 text-center">
                             <div class="flex flex-wrap justify-center gap-1.5">
-                                <button class="text-white bg-slate-700 hover:bg-slate-800 rounded px-3 py-1 text-[11px] font-bold shadow-md transition-transform hover:scale-105 border border-white/20" onclick="window.selectPatient('${p.id}', '${type}')">ประเมิน</button>
+                                <button class="text-white bg-slate-700 hover:bg-slate-800 rounded px-3 py-1 text-[11px] font-bold shadow-md transition-transform hover:scale-105 border border-white/20" onclick="window.selectPatient('${p.id}', '${type}')">${btnEvalText}</button>
                                 <button class="text-amber-700 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/50 backdrop-blur-sm rounded px-2.5 py-1 text-[11px] font-bold transition-colors" onclick="window.openPatientModal('${p.id}')">แก้</button>
-                                ${deleteBtnHtml}
+                                ${actionBtnHtml}
                                 <button class="text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100/90 border border-indigo-200/50 backdrop-blur-sm rounded px-2.5 py-1 text-[11px] font-bold transition-colors" onclick="window.printPatientSummary('${type}', '${p.id}')">🖨️ PDF</button>
                             </div>
                         </td>`;
@@ -1253,8 +1303,10 @@
                 });
 
                 if(count === 0) {
-                    const emptyMsg = `ยังไม่ได้เพิ่มผู้ป่วยในตารางนี้<br><span class="text-xs">กรุณากดปุ่ม <b>+ นำเข้าตาราง</b> ด้านบน</span>`;
-                    const colSpan = isDischarged ? 4 : 5;
+                    const emptyMsg = viewMode === 'untracked' 
+                        ? `ไม่มีผู้ป่วยที่เลิกติดตาม` 
+                        : (viewMode === 'discharged' ? `ไม่มีประวัติผู้ป่วยจำหน่ายในส่วนนี้` : `ยังไม่ได้เพิ่มผู้ป่วยในตารางนี้<br><span class="text-xs">กรุณากดปุ่ม <b>+ นำเข้าตาราง</b> ด้านบน</span>`);
+                    const colSpan = (viewMode === 'discharged' || viewMode === 'untracked') ? 4 : 5;
                     tbody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center py-8 text-slate-500 bg-white/20 backdrop-blur-sm text-sm font-bold border-b border-white/30 drop-shadow-sm">${emptyMsg}</td></tr>`;
                 }
             });
@@ -2136,7 +2188,7 @@
                         resStr += `<div class="mt-1.5"><span class="text-[11px] text-red-800 bg-red-100/90 px-2.5 py-0.5 rounded-lg border border-red-300/50 shadow-sm font-extrabold flex items-center gap-1.5 w-max backdrop-blur-sm"><span class="text-[14px] leading-none drop-shadow-sm">💉</span> ${v.details.intervention}</span></div>`;
                     }
 
-                    const tr = document.createElement('tr');
+                   const tr = document.createElement('tr');
                     tr.className = 'border-b border-white/30 hover:bg-white/60 transition-colors';
                     tr.innerHTML = `
                         <td class="p-4">

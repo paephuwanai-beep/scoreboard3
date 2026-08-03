@@ -2089,6 +2089,42 @@
             showToast('ดึงข้อมูลย้อนหลังเพื่อทำการแก้ไข', 'info');
         };
 
+        window.deleteAssessmentHistory = (type, aid) => {
+            showConfirmationModal('ยืนยันลบประวัติการประเมินรอบนี้?', async () => {
+                try {
+                    await db.doc(`artifacts/${appId}/public/data/patients/${currentPatientData.id}/${type}_assessments/${aid}`).delete();
+                    showToast('ลบประวัติรอบนี้สำเร็จ', 'success');
+                    
+                    // อัปเดตข้อมูลคะแนนล่าสุดในตารางสรุป
+                    const colRef = db.collection(`artifacts/${appId}/public/data/patients/${currentPatientData.id}/${type}_assessments`);
+                    const snap = await colRef.get();
+                    let summaryUpdate = {};
+                    
+                    if (!snap.empty) {
+                        let docsData = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                        docsData.sort((a, b) => new Date(b.assessmentAt).getTime() - new Date(a.assessmentAt).getTime());
+                        const latest = docsData[0];
+                        summaryUpdate[`${type}_latestAssessmentAt`] = latest.assessmentAt;
+                        summaryUpdate[`${type}_latestShift`] = latest.shift;
+                        summaryUpdate[`${type}_latestScore`] = latest.score;
+                        if (type === 'dhf' || type === 'braden') summaryUpdate[`${type}_latestRisk`] = latest.risk;
+                        if (type === 'aws') summaryUpdate[`${type}_latestLevel`] = latest.level;
+                    } else {
+                        summaryUpdate[`${type}_latestAssessmentAt`] = firebase.firestore.FieldValue.delete();
+                        summaryUpdate[`${type}_latestShift`] = firebase.firestore.FieldValue.delete();
+                        summaryUpdate[`${type}_latestScore`] = firebase.firestore.FieldValue.delete();
+                        summaryUpdate[`${type}_nextAssessmentAt`] = firebase.firestore.FieldValue.delete();
+                        if (type === 'dhf' || type === 'braden') summaryUpdate[`${type}_latestRisk`] = firebase.firestore.FieldValue.delete();
+                        if (type === 'aws') summaryUpdate[`${type}_latestLevel`] = firebase.firestore.FieldValue.delete();
+                    }
+                    await db.doc(`artifacts/${appId}/public/data/patients/${currentPatientData.id}`).update(summaryUpdate);
+                } catch (e) {
+                    console.error(e);
+                    showToast('เกิดข้อผิดพลาดในการลบ', 'error');
+                }
+            });
+        };
+
         window.saveAssessment = async (type, isEdit = false, editId = null) => {
             if (!auth.currentUser) return;
             const assessor = window.currentActiveAssessor;
@@ -2143,8 +2179,11 @@
 
             try {
                 const colRef = db.collection(`artifacts/${appId}/public/data/patients/${currentPatientData.id}/${type}_assessments`);
-                if(isEdit) await colRef.doc(editId).set(data, { merge:true });
-                else await colRef.add(data);
+                if(isEdit && editId) {
+                    await colRef.doc(editId).set(data, { merge: true });
+                } else {
+                    await colRef.add(data);
+                }
                 
                 await db.doc(`artifacts/${appId}/public/data/patients/${currentPatientData.id}`).update(summaryUpdate);
                 showToast(isEdit ? 'อัปเดตข้อมูลย้อนหลังสำเร็จ' : 'บันทึกผลการประเมินสำเร็จ', 'success');
@@ -2188,7 +2227,7 @@
                         resStr += `<div class="mt-1.5"><span class="text-[11px] text-red-800 bg-red-100/90 px-2.5 py-0.5 rounded-lg border border-red-300/50 shadow-sm font-extrabold flex items-center gap-1.5 w-max backdrop-blur-sm"><span class="text-[14px] leading-none drop-shadow-sm">💉</span> ${v.details.intervention}</span></div>`;
                     }
 
-                   const tr = document.createElement('tr');
+                    const tr = document.createElement('tr');
                     tr.className = 'border-b border-white/30 hover:bg-white/60 transition-colors';
                     tr.innerHTML = `
                         <td class="p-4">
@@ -2201,7 +2240,10 @@
                         <td class="p-4 drop-shadow-sm">${resStr}</td>
                         <td class="p-4 text-sm text-slate-700 font-bold flex items-center gap-1.5 drop-shadow-sm"><span class="icon-3d text-xs">🧑‍⚕️</span> ${v.assessor}</td>
                         <td class="p-4 text-right">
-                            <button class="text-amber-700 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/50 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" onclick="window.editAssessmentHistory('${type}', '${v.id}')">แก้ไข</button>
+                            <div class="flex justify-end gap-1.5">
+                                <button class="text-amber-700 bg-amber-50/80 hover:bg-amber-100/90 border border-amber-200/50 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" onclick="window.editAssessmentHistory('${type}', '${v.id}')">แก้ไข</button>
+                                <button class="text-red-700 bg-red-50/80 hover:bg-red-100/90 border border-red-200/50 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm" onclick="window.deleteAssessmentHistory('${type}', '${v.id}')">ลบ</button>
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(tr);
